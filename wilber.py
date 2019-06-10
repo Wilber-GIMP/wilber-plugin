@@ -17,9 +17,6 @@ import urllib2
 THUMB_IMAGE_WIDTH = 100
 THUMB_IMAGE_HEIGHT = 100
 
-for i in dir(gtk):
-    print(i)
-
 
 
 class WilberAPIClient(object):
@@ -181,23 +178,26 @@ class WilberGui(object):
         
         
         scrolled_window = gtk.ScrolledWindow()
-        scrolled_window.set_size_request(640, 480)
+        scrolled_window.set_size_request(480, 480)
         view_port = gtk.Viewport()
         
         self.table = gtk.Table(rows=7, columns=3)
         
         for row, asset in enumerate(self.plugin.get_assets()):
             name = asset['name']
-        
-            pixbuf = pixbuf_new_from_file_at_size(asset['image_path'], THUMB_IMAGE_WIDTH, THUMB_IMAGE_HEIGHT)
+            
             image = gtk.Image()
-            image.set_from_pixbuf(pixbuf)  
+            try:
+                pixbuf = pixbuf_new_from_file_at_size(asset['image_path'], THUMB_IMAGE_WIDTH, THUMB_IMAGE_HEIGHT)
+                image.set_from_pixbuf(pixbuf)
+            except Exception as e:
+                print(e)
             
             button = gtk.Button('Download')
             button.connect("clicked", self.download_asset, asset)
             
-            self.table.attach(gtk.Label(name), 0 , 1, row, row+1, False, False)
-            self.table.attach(image, 1, 2, row, row+1, True, True)
+            self.table.attach(image, 0, 1, row, row+1, False, False)
+            self.table.attach(gtk.Label(name), 1 , 2, row, row+1, False, False)
             self.table.attach(button, 2,3, row, row+1, False, False)
         
         view_port.add(self.table)
@@ -227,64 +227,12 @@ class WilberGui(object):
         gtk.main_quit()
 
 
-def download_asset(button, asset):
-    url = asset['file']
-    filepath = download_file(url, asset['type'])
-
-
-
-def wilber_gtk_gui(assets):
-    gui = gtk.Dialog(title='Wilber',
-                        buttons=(
-                            gtk.STOCK_OK,
-                            gtk.RESPONSE_OK))
-    
-    
-    table = gtk.Table(rows=len(assets), columns=3)
-    
-    
-    for row, asset in enumerate(assets):
-        name = asset['name']
-        
-        pixbuf = pixbuf_new_from_file_at_size(asset['image_path'], THUMB_IMAGE_WIDTH, THUMB_IMAGE_HEIGHT)
-        image = gtk.Image()
-        image.set_from_pixbuf(pixbuf)  
-        
-        button = gtk.Button('Download')
-        button.connect("clicked", download_asset, asset)
-        
-        table.attach(gtk.Label(name), 0 , 1, row, row+1)
-        table.attach(image, 1, 2, row, row+1)
-        
-        
-        table.attach(button, 2,3, row, row+1)
-    
-    window = gtk.ScrolledWindow()
-    view = gtk.Viewport()
-    view.add(table)
-    window.add(view)
-    window.show_all()
-    gui.vbox.pack_start(window)
-    
-    
-    while True:
-        response = gui.run()
-        if response != gtk.RESPONSE_OK:
-            gui.destroy()
-            return
-        
-        
-        
-        gui.destroy()
-        return
-
-
 
 def python_wilber():
     wilber = WilberGui()
 
 register_params = {
-    'proc_name': 'python_fu_wilber', 
+    'proc_name': 'wilber_asset_manager', 
     'blurb': 'Manage Gimp Assets', 
     'help': 'Manage Gimp Assets', 
     'author': 'Joao, Robin, Darpan', 
@@ -295,7 +243,7 @@ register_params = {
     'params': [], 
     'results': [], 
     'function': python_wilber, 
-    'menu': '<Image>/Tools', 
+    'menu': '<Toolbox>/Tools', 
     'domain': None, 
     'on_query': None, 
     'on_run': None,
