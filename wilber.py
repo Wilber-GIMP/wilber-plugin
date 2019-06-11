@@ -14,10 +14,15 @@ from gimpfu import *
 import urllib2
 
 
+COMMIT_NUMBER=3
+COMMIT_DATE='2019-06-10'
+
 THUMB_IMAGE_WIDTH = 100
 THUMB_IMAGE_HEIGHT = 100
 
 
+def show_version():
+    print("Started Wilber Plugin Version %s %d" % (COMMIT_DATE, COMMIT_NUMBER))
 
 class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
@@ -252,3 +257,5 @@ register_params = {
 register(**register_params)
 
 main()
+
+show_version()
