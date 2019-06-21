@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding: utf-8
 import os
 import sys
 import urllib2
@@ -8,8 +9,7 @@ import ast
 from os import path
 from os.path import dirname, realpath, join
 from datetime import datetime
-from configparser import SafeConfigParser
-
+from ConfigParser import SafeConfigParser
 
 import gtk
 import gtk.gdk
@@ -26,8 +26,6 @@ import requests_cache
 
 
 
-
-
 COMMIT_NUMBER=5
 COMMIT_DATE='2019-06-21'
 
@@ -37,7 +35,6 @@ THUMB_IMAGE_HEIGHT = 200
 
 def show_version():
     print("Started Wilber Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
-
 
 
 class Config(object):
@@ -63,13 +60,9 @@ class Config(object):
                 return result
         return self.parser.get(page, key)
 
-
     def get_values(self):
         self.username = self.parser.get('User', 'username')
         self.password = self.parser.get('User', 'password')
-
-
-
 
     def save(self):
         with open(self.SETTINGS_PATH, 'w') as configfile:
@@ -193,7 +186,6 @@ class WilberPlugin(object):
         folder = path.join(self.get_wilber_folder(), asset['folder'])
         return folder
 
-
     def mkdirs(self, path):
         if not os.path.exists(path):
             try:
@@ -205,7 +197,6 @@ class WilberPlugin(object):
     def get_filename_from_url(self, url):
         if '/' in url:
             return url.rsplit('/', 1)[1]
-
 
     def download_file(self, url, folder='thumbs'):
         print('Downloading', url)
@@ -235,11 +226,13 @@ class WilberPlugin(object):
 
 class WilberConfigDialog(gtk.Dialog):
     def __init__(self):
-        dialog = gtk.Dialog("Wilber Config",
-                   None,
-                   gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                   (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-                    gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        dialog = gtk.Dialog(
+            "Wilber Config",
+            None,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+            gtk.STOCK_OK, gtk.RESPONSE_ACCEPT)
+        )
 
         label_username = gtk.Label("Username:")
         entry_username = gtk.Entry()
@@ -262,6 +255,7 @@ class WilberConfigDialog(gtk.Dialog):
         checkbox.show()
         dialog.show_all()
 
+
 class WilberGui(object):
     def __init__(self):
         self.plugin = WilberPlugin()
@@ -271,6 +265,8 @@ class WilberGui(object):
         self.window.set_icon(windowicon)
 
         self.create_widgets()
+        self.window.connect("destroy", gtk.mainquit);
+
         self.connect_signals()
 
         self.window.show_all()
@@ -392,19 +388,18 @@ class WilberGui(object):
         dialog.destroy()
 
 
-
 def python_wilber():
     wilber = WilberGui()
 
 register_params = {
     'proc_name': 'wilber_asset_manager',
-    'blurb': 'Manage Gimp Assets',
-    'help': 'Manage Gimp Assets',
+    'blurb': 'Manage GIMP Assets',
+    'help': 'Manage GIMP Assets',
     'author': 'Joao, Robin, Darpan',
-    'copyright': 'Joao, Robin, Darpan',
+    'copyright': 'João, Robin, Darpan',
     'date': '2019',
-    'label': 'Manage Gimp Assets',
-    'imagetypes': '*',
+    'label': 'Manage GIMP Assets',
+    'imagetypes': None,
     'params': [],
     'results': [],
     'function': python_wilber,
