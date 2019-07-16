@@ -1,3 +1,6 @@
+# coding: utf-8
+from __future__ import print_function, unicode_literals
+
 import gtk
 from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
 

@@ -1,3 +1,8 @@
+# coding: utf-8
+
+from __future__ import print_function, unicode_literals
+
+
 import requests
 import requests_cache
 #requests_cache.install_cache('/home/darpan/tmp/wilber-cache')
