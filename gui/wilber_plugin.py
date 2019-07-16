@@ -26,11 +26,12 @@ class WilberPlugin(object):
 
     def get_wilber_folder(self):
         wilber_folder = path.join(gimp.directory, 'plug-ins', 'wilber')
-        self.mkdirs(wilber_folder)
+        if not os.path.exists(wilber_folder):
+            self.mkdirs(wilber_folder)
         return wilber_folder
 
     def get_asset_folder(self, asset):
-        folder = path.join(self.get_wilber_folder(), asset['folder'])
+        folder = os.path.join(self.get_wilber_folder(), asset['folder'])
         return folder
 
     def mkdirs(self, path):

@@ -65,10 +65,11 @@ class WilberAPIClient(object):
 
     #API GET ASSETS
     def get_assets(self, type=None):
-        url = self.URL + '/api/asset/?format=json'
+        url = self.URL + '/api/asset/'
+        params = {"format": "json"}
         if type:
-            url += "&type=%s" % type
-        json = self.request_get(url)
+            params["type"] = type
+        json = self.request_get(url, params=params)
         return json['results']
 
     def put_asset(self, name, type, desc, image, file):

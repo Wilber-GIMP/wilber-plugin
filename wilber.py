@@ -23,7 +23,7 @@ COMMIT_NUMBER = 7
 COMMIT_DATE = '2019-07-15'
 
 def show_version():
-    print("Started Wilber Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
+    print("Started Wilber Social Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
 
 
 settings = Config(WILBER_PATH)

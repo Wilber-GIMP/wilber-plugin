@@ -41,8 +41,6 @@ class WilberConfigDialog(gtk.Dialog):
         dialog.show_all()
 
 
-
-
 class WilberGui(object):
     def __init__(self, settings):
         self.settings = settings
@@ -59,7 +57,6 @@ class WilberGui(object):
         self.connect_signals()
 
         self.window.show_all()
-
 
         gtk.main()
 
@@ -103,9 +100,9 @@ class WilberGui(object):
             button = gtk.Button('Download')
             button.connect("clicked", self.download_asset, asset)
 
-            self.table.attach(image, 0, 1, row, row+1, False, False)
-            self.table.attach(gtk.Label(name), 1 , 2, row, row+1, False, False)
-            self.table.attach(button, 2,3, row, row+1, False, False)
+            self.table.attach(image, 0, 1, row, row+1, False, False, xpadding=6)
+            self.table.attach(gtk.Label(name), 1 , 2, row, row+1, False, False, xpadding=6)
+            self.table.attach(button, 2,3, row, row+1, False, False, xpadding=6)
 
         view_port.add(self.table)
         scrolled_window.add(view_port)
