@@ -1,26 +1,27 @@
-import sys
-from os.path import dirname, realpath, join
+# coding: utf-8
 
-PLUGINS_PATH = dirname(realpath(__file__))
-WILBER_LIBS_PATH = join(PLUGINS_PATH, 'libs')
+from __future__ import print_function, unicode_literals, division
 
-sys.path.insert(0, WILBER_LIBS_PATH)
 
 import requests
 import requests_cache
 
 from wilber_config import Config
+from wilber_common import ASSET_TYPE_TO_CATEGORY
 
 class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
     def __init__(self):
         self.settings = Config()
+        self.URL = settings.get_server_url()
         self.token = None
 
         if self.settings.get_use_cache():
             requests_cache.install_cache(self.settings.get_cache_folder())
 
     def headers(self):
+        if not self.token:
+            self.login(self.settings.username, self.settings.password)
         if self.token:
             return {'Authorization': 'Token %s' % self.token}
         return {}
@@ -33,6 +34,9 @@ class WilberAPIClient(object):
 
     def request_post(self, url, data={}, headers={}, files={}, json=True):
         response = requests.post(url, data=data, headers=headers, files=files)
+        print(response.status_code)
+        if response.status_code > 399:
+            print(response.content)
         if json:
             return response.json()
         return response
@@ -65,20 +69,19 @@ class WilberAPIClient(object):
 
         if token_key in response:
             self.token = response[token_key]
+            print("logged in succesfully into Wilber Social")
             return self.token
         else:
-            print('ERROR')
-            print(response)
-            return None
-
+            print("Failed to login in Wilber Social")
 
     #API GET ASSETS
-    def get_assets(self, type=None):
-        url = self.URL + '/api/asset/?format=json'
-        if type:
-            url += "&type=%s" % type
-        json = self.request_get(url)
-        return json['results']
+    def get_assets(self, type_=None):
+        url = self.URL + '/api/asset/'
+        params = {"format": "json"}
+        if type_:
+            params["category"] = ASSET_TYPE_TO_CATEGORY[type_]
+        json_data = self.request_get(url, params=params)
+        return json_data['results']
 
     def put_asset(self, name, category, desc, image, file):
         url = self.URL + '/api/asset/'
@@ -87,9 +90,10 @@ class WilberAPIClient(object):
             'category':category,
             }
         files = {
-            'image':open(image, 'rb'),
-            'file':open(file, 'rb'),
+            'file': open(file, 'rb'),
         }
+        if image:
+            files["image"] = open(image, "rb")
 
         response = self.request_post(url, data=data, files=files, headers=self.headers(), json=False)
         return response

@@ -1,6 +1,23 @@
+# coding: utf-8
+from __future__ import unicode_literals, print_function, division
+
+import os
+
 import gtk
 
-from wilber_api import WilberAPIClient
+
+DEBUG = False
+
+class Folder(object):
+    def __init__(self, folder):
+        self.folder = folder
+
+    def __enter__(self):
+        self.previous_dir = os.getcwd()
+        os.chdir(self.folder)
+
+    def __exit__(self, exc_type, exc_value, tb):
+        os.chdir(self.previous_dir)
 
 
 class WilberUploadDialog(object):
@@ -11,8 +28,9 @@ class WilberUploadDialog(object):
             "Wilber Upload",
             None,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-            gtk.STOCK_OK, gtk.RESPONSE_OK))
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+             gtk.STOCK_OK, gtk.RESPONSE_ACCEPT)
+        )
 
         self.create_widgets()
 
@@ -23,17 +41,19 @@ class WilberUploadDialog(object):
         self.connect_signals()
         self.dialog.connect("destroy", self.destroy)
         self.dialog.show_all()
+        self.base_folder = folder
 
     def create_widgets(self):
 
 
         label_1 = gtk.Label("Name:")
         label_2 = gtk.Label("Description:")
-        self.button_select_image = gtk.Button("Select Image")
+        self.button_select_image = gtk.Button("Select Thumbnail")
         self.button_add_file = gtk.Button("Add File")
         self.button_remove_file = gtk.Button("Remove Selected")
         self.entry_name = gtk.Entry()
         self.entry_description = gtk.TextView()
+        self.entry_description.set_size_request(200, 100)
 
         self.image_widget = gtk.Image()
 
@@ -82,7 +102,7 @@ class WilberUploadDialog(object):
 
         response = dialog.run()
         filename = None
-        if response == gtk.RESPONSE_OK:
+        if response in (gtk.RESPONSE_OK, gtk.RESPONSE_ACCEPT):
             self.image_filename = dialog.get_filename()
             pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(self.image_filename, 200, 200)
             self.image_widget.set_from_pixbuf(pixbuf)
@@ -93,9 +113,15 @@ class WilberUploadDialog(object):
 
 
     def add_file(self, widget):
-        dialog = gtk.FileChooserDialog(title="Add File", action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-        dialog.set_select_multiple(True)
-        response = dialog.run()
+        with Folder(self.base_folder):
+            dialog = gtk.FileChooserDialog(
+                title="Add File",
+
+                action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK)
+            )
+            dialog.set_select_multiple(True)
+            response = dialog.run()
         if response == gtk.RESPONSE_OK:
             filenames = dialog.get_filenames()
             for filename in filenames:
@@ -129,20 +155,15 @@ class WilberUploadDialog(object):
 
         response = self.dialog.run()
 
-        if response == gtk.RESPONSE_OK:
-
-            result = {}
-            result['name'] = self.get_name()
-            result['description'] = self.get_description()
-            result['image'] = self.get_image()
-            result['filenames'] = self.get_filenames()
-
-            self.do_upload(result)
-
+        result = {}
+        result['name'] = self.get_name()
+        result['description'] = self.get_description()
+        result['image'] = self.get_image()
+        result['filenames'] = self.get_filenames()
 
         self.dialog.destroy()
 
-        return
+        return response, result
 
 
     def do_upload(self, data):
@@ -161,10 +182,11 @@ class WilberUploadDialog(object):
         return self.dialog.get_filename()
 
     def destroy(self, widget, data=None):
-        print("destroy")
-        #gtk.main_quit()
+        if DEBUG:
+            gtk.main_quit()
 
 
 if __name__ == '__main__':
+    DEBUG = True
     dialog = WilberUploadDialog('')
     result = dialog.run()

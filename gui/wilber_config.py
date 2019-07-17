@@ -1,3 +1,5 @@
+# coding: utf-8
+from __future__ import print_function, unicode_literals, division
 import ConfigParser
 from ConfigParser import SafeConfigParser
 
@@ -39,18 +41,15 @@ class Config(object):
     def get_values(self):
         try:
             self.username = self.parser.get('User', 'username')
-        except ConfigParser.NoOptionError:
-            self.username = ''
-
-        try:
             self.password = self.parser.get('User', 'password')
-        except ConfigParser.NoOptionError:
+        except NoSectionError:
+            self.username = ''
             self.password = ''
 
 
 
     def save(self):
-        with open(self.settings_path, 'w') as configfile:
+        with open(self.settings_path, 'wt') as configfile:
             self.parser.write(configfile)
             print('Config File saved at',self.settings_path)
 
@@ -80,3 +79,6 @@ class Config(object):
 
     def set_token(self, value):
         self.set('User', 'token', value)
+
+    def get_server_url(self):
+        return self.get('Server', 'server_url')

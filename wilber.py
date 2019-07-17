@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
+
+from __future__ import unicode_literals, print_function, division
 import sys
 from os.path import dirname, realpath, join
 from datetime import datetime
@@ -19,16 +21,11 @@ from gui.wilber_gui import WilberGui
 from gui.wilber_config import Config
 
 
-COMMIT_NUMBER=9
-COMMIT_DATE='2019-07-16'
-
-
-
+COMMIT_NUMBER = 15
+COMMIT_DATE = '2019-07-17'
 
 def show_version():
-    path = realpath(__file__)
-    print("Started Wilber Plugin Version %s %d %s\n" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
-    print(path)
+    print("Started Wilber Social Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
 
 
 settings = Config(WILBER_PATH)
@@ -53,12 +50,12 @@ register_params = {
     'params': [],
     'results': [],
     'function': python_wilber,
-    'menu': '<Toolbox>/Tools',
+    'menu': '<Toolbox>/File',
     'domain': None,
     'on_query': None,
     'on_run': None,
 }
 
 register(**register_params)
-show_version()
+#show_version()
 main()
