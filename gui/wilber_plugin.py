@@ -6,6 +6,7 @@ import errno
 import os
 import sqlite3
 from os import path
+import shutil
 
 #GIMP imports
 
@@ -15,16 +16,8 @@ import gimpfu
 
 #Wilber imports
 from wilber_api import WilberAPIClient
+from wilber_common import ASSET_TYPE_TO_CATEGORY
 
-ASSET_TYPE_TO_CATEGORY = {
-    "brush": "brushes",
-    "pattern": "patterns",
-    "gradient": "gradients",
-    "plug-in": "plug-ins",
-    "palette": "palettes",
-    "preset": "presets",
-
-}
 
 class WilberPlugin(object):
     def __init__(self, settings):
@@ -75,10 +68,30 @@ class WilberPlugin(object):
         url = asset['file']
         folder = self.get_asset_folder(asset)
         filepath = self.download_file(url, folder)
-        print("Asset downloaded to '%s'" % filepath)
+
+        destination_folder = self.get_gimp_folder(asset)
+        if not destination_folder:
+            print("Asset downloaded to '%s'" % filepath)
+            return
+        shutil.move(filepath, destination_folder)
+        final_path = os.path.join(destination_folder, os.path.basename(filepath))
+
+        category = asset["category"]
+        if category in "brushes gradients palettes dynamics fonts palette patterns":
+            procedure = getattr(pdb, "gimp_%s_refresh" % category)
+            procedure()
+        print("Asset downloaded and moved to '%s'" % final_path)
+
+
+    def get_gimp_folder(self, asset):
+        folder = os.path.join(gimp.directory, asset.get("category", "NONEXISTENT"))
+        if not os.path.exists(folder):
+            return None
+        return folder
+
 
     def get_assets(self):
-        assets = self.api.get_assets()
+        assets = self.api.get_assets(type_=self.current_asset_type)
 
         for asset in assets:
             url = asset['image']

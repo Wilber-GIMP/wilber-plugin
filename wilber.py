@@ -19,8 +19,8 @@ from gui.wilber_gui import WilberGui
 from gui.wilber_config import Config
 
 
-COMMIT_NUMBER = 7
-COMMIT_DATE = '2019-07-15'
+COMMIT_NUMBER = 15
+COMMIT_DATE = '2019-07-17'
 
 def show_version():
     print("Started Wilber Social Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
@@ -31,7 +31,6 @@ settings.save()
 
 #if settings.get_use_cache():
 #    requests_cache.install_cache(join(WILBER_PATH,'wilber_cache'))
-
 
 def python_wilber():
     wilber = WilberGui(settings)

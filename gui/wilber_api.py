@@ -8,6 +8,7 @@ import requests_cache
 #requests_cache.install_cache('/home/darpan/tmp/wilber-cache')
 
 
+from wilber_common import ASSET_TYPE_TO_CATEGORY
 
 class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
@@ -37,7 +38,7 @@ class WilberAPIClient(object):
     def request_post(self, url, data={}, headers={}, files={}, json=True):
         response = requests.post(url, data=data, headers=headers, files=files)
         print(response.status_code)
-        if response.status_code != 200:
+        if response.status_code > 399:
             print(response.content)
         if json:
             return response.json()
@@ -69,20 +70,21 @@ class WilberAPIClient(object):
             print("Failed to login in Wilber Social")
 
     #API GET ASSETS
-    def get_assets(self, type=None):
+    def get_assets(self, type_=None):
         url = self.URL + '/api/asset/'
         params = {"format": "json"}
-        if type:
-            params["type"] = type
-        json = self.request_get(url, params=params)
-        return json['results']
+        if type_:
+            params["category"] = ASSET_TYPE_TO_CATEGORY[type_]
+        json_data = self.request_get(url, params=params)
+        return json_data['results']
 
     def put_asset(self, name, type, description, image, file):
         url = self.URL + '/api/asset/'
-        data = {'name': name,
+        data = {
+            'name': name,
             'description': description,
             'category': type,
-            }
+        }
         files = {
             'file': open(file, 'rb'),
         }

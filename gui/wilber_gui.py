@@ -165,7 +165,10 @@ class WilberGui(object):
 
 
     def download_asset(self, button, asset):
+        self.set_status("Downloading '%s' " % asset["name"], timeout=None)
         self.plugin.download_asset(asset)
+        self.hide_status()
+        self.set_status("Asset '%s' downloaded" % asset["name"], timeout=5000)
 
     def connect_signals(self):
         self.button_exit.connect("clicked", self.callback_exit)
@@ -198,11 +201,10 @@ class WilberGui(object):
             self.set_status("Incorrect or insuficient data to upload", 1500)
             return
 
-
         self.set_status("Uploading asset '%s' " % response_data["name"], timeout=None)
         upload_response = self.plugin.api.put_asset(**response_data)
         self.hide_status()
-        if upload_response.status_code == 200:
+        if upload_response.status_code < 399:
             self.set_status("Asset '%s' uploaded successfuly" % response_data["name"], 5000)
         else:
             self.set_status("Error in uploading asset - HTTP code: '%s'" % upload_response.status_code, 5000)
