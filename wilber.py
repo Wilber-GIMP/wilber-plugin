@@ -6,15 +6,8 @@ import sys
 from os.path import dirname, realpath, join
 from datetime import datetime
 
-
-PLUGINS_PATH = dirname(realpath(__file__))
-WILBER_PATH = join(PLUGINS_PATH, 'wilber')
-WILBER_LIBS_PATH = join(WILBER_PATH, 'libs')
-
-sys.path.insert(0, WILBER_LIBS_PATH)
-
 from gimpfu import register, main
-
+import gimp
 
 
 from gui.wilber_gui import WilberGui
@@ -28,15 +21,8 @@ def show_version():
     print("Started Wilber Social Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
 
 
-settings = Config(WILBER_PATH)
-settings.save()
-
-#if settings.get_use_cache():
-#    requests_cache.install_cache(join(WILBER_PATH,'wilber_cache'))
-
-
 def python_wilber():
-    wilber = WilberGui(settings)
+    wilber = WilberGui(gimp.directory)
 
 register_params = {
     'proc_name': 'wilber_asset_manager',

@@ -1,7 +1,8 @@
 import gtk
 from os.path import dirname, join, realpath
 
-
+from wilber_config import Config
+from wilber_api import WilberAPIClient
 
 class WilberConfigDialog(object):
     def __init__(self):
@@ -54,7 +55,7 @@ class WilberConfigDialog(object):
         self.config.save()
 
     def login(self):
-        api = WilberAPIClient(config)
+        api = WilberAPIClient()
         token = api.login(self.username, self.password)
         return token
 

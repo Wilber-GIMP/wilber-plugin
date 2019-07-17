@@ -22,7 +22,7 @@ from wilber_common import ASSET_TYPE_TO_CATEGORY
 class WilberPlugin(object):
     def __init__(self, settings):
         self.settings = settings
-        self.api = WilberAPIClient(settings)
+        self.api = WilberAPIClient()
         self.db = self.init_db()
         self.current_asset_type = "brush"
 
@@ -129,7 +129,7 @@ class WilberPlugin(object):
         description = response["description"]
         response.clear()
         response["name"] = name
-        response["type"] = ASSET_TYPE_TO_CATEGORY[self.current_asset_type]
+        response["category"] = ASSET_TYPE_TO_CATEGORY[self.current_asset_type]
         response["description"] = description # self.ensure_tags_in_descritpion(response["description"])
         response["image"] = thumbnail_new_path
         response["file"] = filename

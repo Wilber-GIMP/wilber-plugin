@@ -1,17 +1,19 @@
 import gtk
+import glib
 from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
 
-
+from wilber_common import ASSET_TYPE_TO_CATEGORY
 from wilber_plugin import WilberPlugin
 from wilber_gui_upload import WilberUploadDialog
 from wilber_gui_config import WilberConfigDialog
-
+from wilber_config import Config
 
 
 class WilberGui(object):
-    def __init__(self, settings):
-        self.settings = settings
-        self.plugin = WilberPlugin(settings)
+    def __init__(self, gimp_directory):
+        self.settings = Config()
+        self.gimp_directory = gimp_directory
+        self.plugin = WilberPlugin(self.settings)
         self.window = gtk.Window()
         self.window.set_title("Wilber Asset Manager")
         windowicon = self.window.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_LARGE_TOOLBAR)
@@ -67,18 +69,18 @@ class WilberGui(object):
         self.hbox_2.pack_start(self.button_exit)
 
 
-        scrolled_window = gtk.ScrolledWindow()
-        scrolled_window.set_size_request(480, 480)
+        self.scrolled_window = gtk.ScrolledWindow()
+        self.scrolled_window.set_size_request(480, 480)
         self.view_port = view_port = gtk.Viewport()
 
         self.update_asset_listing()
 
 
-        scrolled_window.add(view_port)
+        self.scrolled_window.add(view_port)
 
 
         self.vbox.pack_start(self.hbox_1, False, False,)
-        self.vbox.pack_start(scrolled_window, True, True)
+        self.vbox.pack_start(self.scrolled_window, True, True)
         self.vbox.pack_start(self.hbox_2, False, False)
 
         self.window.add(self.vbox)
@@ -119,11 +121,11 @@ class WilberGui(object):
         self.view_port.add(self.table)
 
 
-        self.vbox.pack_start(self.hbox_1, False, False,)
-        self.vbox.pack_start(scrolled_window, True, True)
-        self.vbox.pack_start(self.hbox_2, False, False)
+        #self.vbox.pack_start(self.hbox_1, False, False,)
+        #self.vbox.pack_start(self.scrolled_window, True, True)
+        #self.vbox.pack_start(self.hbox_2, False, False)
 
-        self.window.add(self.vbox)
+        #self.window.add(self.vbox)
 
     def window_upload(self):
         print("show")
@@ -164,9 +166,8 @@ class WilberGui(object):
         self.status_bar.hide()
 
     def callback_upload(self, widget, callback_data=None):
-        dialog = WilberUploadDialog(gimp.directory)
-        # embed()
-        #dialog = gtk_file_chooser_dialog_new('Upload', self.window)
+        dialog = WilberUploadDialog(self.gimp_directory)
+
         response, response_data = dialog.run()
         if  response not in (gtk.RESPONSE_OK, gtk.RESPONSE_ACCEPT):
             self.set_status("Upload canceled", 1500)
@@ -176,6 +177,7 @@ class WilberGui(object):
             return
 
         self.set_status("Uploading asset '%s' " % response_data["name"], timeout=None)
+
         upload_response = self.plugin.api.put_asset(**response_data)
         self.hide_status()
         if upload_response.status_code < 399:

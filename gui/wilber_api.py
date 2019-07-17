@@ -1,8 +1,13 @@
 # coding: utf-8
-
 from __future__ import print_function, unicode_literals, division
 
+import sys
+from os.path import dirname, realpath, join
 
+PLUGINS_PATH = dirname(realpath(__file__))
+WILBER_LIBS_PATH = join(PLUGINS_PATH, 'libs')
+sys.path.insert(0, WILBER_LIBS_PATH)
+print('PATH:',WILBER_LIBS_PATH)
 import requests
 import requests_cache
 
@@ -10,10 +15,11 @@ from wilber_config import Config
 from wilber_common import ASSET_TYPE_TO_CATEGORY
 
 class WilberAPIClient(object):
-    URL = 'http://127.0.0.1:8000'
+
     def __init__(self):
         self.settings = Config()
-        self.URL = settings.get_server_url()
+        self.URL = self.settings.get_server_url()
+        self.URL = 'http://127.0.0.1:8000'
         self.token = None
 
         if self.settings.get_use_cache():
@@ -83,10 +89,10 @@ class WilberAPIClient(object):
         json_data = self.request_get(url, params=params)
         return json_data['results']
 
-    def put_asset(self, name, category, desc, image, file):
+    def put_asset(self, name, category, description, image, file):
         url = self.URL + '/api/asset/'
         data = {'name':name,
-            'description':desc,
+            'description':description,
             'category':category,
             }
         files = {

@@ -21,7 +21,7 @@ class Folder(object):
 
 
 class WilberUploadDialog(object):
-    def __init__(self, folder):
+    def __init__(self, folder='.'):
 
 
         self.dialog = gtk.Dialog(
@@ -36,8 +36,6 @@ class WilberUploadDialog(object):
 
         self.image_filename = None
 
-
-        self.api = WilberAPIClient()
         self.connect_signals()
         self.dialog.connect("destroy", self.destroy)
         self.dialog.show_all()
@@ -188,5 +186,5 @@ class WilberUploadDialog(object):
 
 if __name__ == '__main__':
     DEBUG = True
-    dialog = WilberUploadDialog('')
+    dialog = WilberUploadDialog()
     result = dialog.run()
