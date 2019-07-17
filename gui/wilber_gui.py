@@ -1,16 +1,26 @@
 # coding: utf-8
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, unicode_literals, division
 
+import glib
 import gtk
-from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
+# from gtk.gdk import Pixbuf, pixbuf_new_from_stream
+from gtk.gdk import pixbuf_new_from_file_at_size
 
 
 from wilber_plugin import WilberPlugin
+from wilber_gui_upload import WilberUploadDialog
 
+
+try:
+    import gimp
+except ImportError:
+    # Only used when debugging the UI
+    class gimp(object):
+        directory = "."
 
 
 class WilberConfigDialog(gtk.Dialog):
-    def __init__(self):
+    def __init__(self, settings):
         dialog = gtk.Dialog(
             "Wilber Config",
             None,
@@ -25,9 +35,10 @@ class WilberConfigDialog(gtk.Dialog):
         label_password = gtk.Label("Password:")
         entry_password = gtk.Entry()
         entry_password.set_visibility(False)
+        entry_password.set_invisible_char("*")
 
-        entry_username.set_text(config.username)
-        entry_password.set_text(config.password)
+        entry_username.set_text(settings.username)
+        entry_password.set_text(settings.password)
 
         dialog.vbox.pack_start(label_username)
         dialog.vbox.pack_start(entry_username)
@@ -57,12 +68,16 @@ class WilberGui(object):
         self.connect_signals()
 
         self.window.show_all()
+        self.hide_status()
 
         gtk.main()
 
 
     def create_widgets(self):
         self.vbox = gtk.VBox(spacing=10)
+
+        self.status_bar = gtk.Label("")
+        self.vbox.pack_start(self.status_bar)
 
         self.hbox_1 = gtk.HBox(spacing=10)
         self.label = gtk.Label("Search:")
@@ -114,12 +129,6 @@ class WilberGui(object):
 
         self.window.add(self.vbox)
 
-    def window_upload(self):
-        print("show")
-        self.dialog_upload = gtk_dialog_new_with_buttons('Upload', self.window)
-
-        self.dialog_upload.show()
-
 
     def window_config(self):
 
@@ -166,18 +175,40 @@ class WilberGui(object):
 
     def callback_ok(self, widget, callback_data=None):
         name = self.entry.get_text()
+        print(name)
+
+    def set_status(self, message, timeout=3000):
+        self.status_bar.set_text(message)
+        self.status_bar.show()
+        if timeout:
+            glib.timeout_add(timeout, self.hide_status, None)
+
+    def hide_status(self, *args):
+        self.status_bar.hide()
 
     def callback_upload(self, widget, callback_data=None):
-        #dialog = WilberUploadDialog()
-        embed()
+        dialog = WilberUploadDialog(gimp.directory)
+        # embed()
         #dialog = gtk_file_chooser_dialog_new('Upload', self.window)
-        #response = dialog.run()
+        response, response_data = dialog.run()
+        if  response not in (gtk.RESPONSE_OK, gtk.RESPONSE_ACCEPT):
+            self.set_status("Upload canceled", 1500)
+        response_ok = self.plugin.sanitize_response(response_data)
+        if not response_ok:
+            self.set_status("Incorrect or insuficient data to upload", 1500)
+            return
 
+
+        self.set_status("Uploading asset '%s' " % response_data["name"], timeout=None)
+        upload_response = self.plugin.api.put_asset(**response_data)
+        self.hide_status()
+        if upload_response.status_code == 200:
+            self.set_status("Asset '%s' uploaded successfuly" % response_data["name"], 5000)
+        else:
+            self.set_status("Error in uploading asset - HTTP code: '%s'" % upload_response.status_code, 5000)
 
     def callback_exit(self, widget, callback_data=None):
-        print('trying to quit')
         gtk.main_quit()
-        print('im still here')
 
     def callback_show_config(self, widget, callback_data=None):
         dialog = self.window_config()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from __future__ import unicode_literals, print_function
+from __future__ import unicode_literals, print_function, division
 import sys
 from os.path import dirname, realpath, join
 from datetime import datetime
