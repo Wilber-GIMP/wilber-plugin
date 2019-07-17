@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
+
+from __future__ import unicode_literals, print_function, division
 import sys
 from os.path import dirname, realpath, join
 from datetime import datetime
@@ -13,20 +15,15 @@ sys.path.insert(0, WILBER_LIBS_PATH)
 
 from gimpfu import register, main
 
-
-
-from gui.wilber_gui_main_window import WilberGui
+from gui.wilber_gui import WilberGui
 from gui.wilber_config import Config
 
 
-COMMIT_NUMBER=5
-COMMIT_DATE='2019-06-21'
-
-
-
+COMMIT_NUMBER = 15
+COMMIT_DATE = '2019-07-17'
 
 def show_version():
-    print("Started Wilber Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
+    print("Started Wilber Social Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
 
 
 settings = Config(WILBER_PATH)
@@ -34,7 +31,6 @@ settings.save()
 
 #if settings.get_use_cache():
 #    requests_cache.install_cache(join(WILBER_PATH,'wilber_cache'))
-
 
 def python_wilber():
     wilber = WilberGui(settings)
@@ -51,7 +47,7 @@ register_params = {
     'params': [],
     'results': [],
     'function': python_wilber,
-    'menu': '<Toolbox>/Tools',
+    'menu': '<Toolbox>/File',
     'domain': None,
     'on_query': None,
     'on_run': None,

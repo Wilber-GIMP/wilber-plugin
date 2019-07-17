@@ -1,4 +1,7 @@
-from ConfigParser import SafeConfigParser
+# coding: utf-8
+from __future__ import print_function, unicode_literals, division
+
+from ConfigParser import SafeConfigParser, NoSectionError
 from os.path import join
 import ast
 
@@ -28,11 +31,15 @@ class Config(object):
         return self.parser.get(page, key)
 
     def get_values(self):
-        self.username = self.parser.get('User', 'username')
-        self.password = self.parser.get('User', 'password')
+        try:
+            self.username = self.parser.get('User', 'username')
+            self.password = self.parser.get('User', 'password')
+        except NoSectionError:
+            self.username = ''
+            self.password = ''
 
     def save(self):
-        with open(self.settings_path, 'w') as configfile:
+        with open(self.settings_path, 'wt') as configfile:
             self.parser.write(configfile)
             print('Config File saved at',self.settings_path)
 

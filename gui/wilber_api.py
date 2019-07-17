@@ -1,8 +1,14 @@
+# coding: utf-8
+
+from __future__ import print_function, unicode_literals, division
+
+
 import requests
 import requests_cache
 #requests_cache.install_cache('/home/darpan/tmp/wilber-cache')
 
 
+from wilber_common import ASSET_TYPE_TO_CATEGORY
 
 class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
@@ -16,6 +22,8 @@ class WilberAPIClient(object):
         #self.cached_sess = CacheControl(self.sess)
 
     def headers(self):
+        if not self.token:
+            self.login(self.settings.username, self.settings.password)
         if self.token:
             return {'Authorization': 'Token %s' % self.token}
         return {}
@@ -27,12 +35,14 @@ class WilberAPIClient(object):
             return response.json()
         return response
 
-    def request_post(self, url, data={}, headers={}, json=True):
-        response = requests.post(url, data=data, headers=headers)
+    def request_post(self, url, data={}, headers={}, files={}, json=True):
+        response = requests.post(url, data=data, headers=headers, files=files)
+        print(response.status_code)
+        if response.status_code > 399:
+            print(response.content)
         if json:
             return response.json()
         return response
-
 
 
     #API CREATE USER
@@ -54,28 +64,32 @@ class WilberAPIClient(object):
         response = self.request_post(url, data)
         if 'key' in response:
             self.token = response['key']
+            print("logged in succesfully into Wilber Social")
             return self.token
         else:
-            print(r)
+            print("Failed to login in Wilber Social")
 
     #API GET ASSETS
-    def get_assets(self, type=None):
-        url = self.URL + '/api/asset/?format=json'
-        if type:
-            url += "&type=%s" % type
-        json = self.request_get(url)
-        return json['results']
-
-    def put_asset(self, name, type, desc, image, file):
+    def get_assets(self, type_=None):
         url = self.URL + '/api/asset/'
-        data = {'name':name,
-            'description':desc,
-            'type':type,
-            }
-        files = {
-            'image':open(image, 'rb'),
-            'file':open(file, 'rb'),
+        params = {"format": "json"}
+        if type_:
+            params["category"] = ASSET_TYPE_TO_CATEGORY[type_]
+        json_data = self.request_get(url, params=params)
+        return json_data['results']
+
+    def put_asset(self, name, type, description, image, file):
+        url = self.URL + '/api/asset/'
+        data = {
+            'name': name,
+            'description': description,
+            'category': type,
         }
+        files = {
+            'file': open(file, 'rb'),
+        }
+        if image:
+            files["image"] = open(image, "rb")
 
         response = self.request_post(url, data=data, files=files, headers=self.headers(), json=False)
         return response
