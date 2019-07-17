@@ -22,8 +22,11 @@ class WilberPlugin(object):
         db = sqlite3.connect(db_path)
         return db
 
+    def get_gimp_folder(self):
+        return gimp.directory
+
     def get_wilber_folder(self):
-        wilber_folder = path.join(gimp.directory, 'plug-ins', 'wilber')
+        wilber_folder = path.join(self.get_gimp_folder(), 'plug-ins', 'wilber')
         self.mkdirs(wilber_folder)
         return wilber_folder
 
@@ -67,3 +70,9 @@ class WilberPlugin(object):
             filepath = self.download_file(url)
             asset['image_path'] = filepath
         return assets
+
+    def put_asset(self, *args, **kwargs):
+        username = self.settings.get_username()
+        password = self.settings.get_password()
+        self.api.login(username, password)
+        return self.api.put_asset(*args, **kwargs)

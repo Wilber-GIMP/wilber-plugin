@@ -1,14 +1,23 @@
+import ConfigParser
 from ConfigParser import SafeConfigParser
-from os.path import join
+
+from os.path import dirname, join, realpath
 import ast
 
-class Config(object):
-    SETTINGS_FILE = 'settings.ini'
-    #SETTINGS_PATH = join(WILBER_PATH, SETTINGS_FILE)
 
-    def __init__(self, wilber_path):
-        self.settings_path = join(wilber_path, self.SETTINGS_FILE)
-        self.cache_folder = join(wilber_path, 'wilber_cache')
+
+class Config(object):
+    GUI_PATH = dirname(realpath(__file__))
+    WILBER_PATH = join(dirname(GUI_PATH), 'wilber')
+    CACHE_PATH = join(WILBER_PATH, 'wilber_cache')
+
+    SETTINGS_FILE = 'settings.ini'
+    SETTINGS_FILEPATH = join(WILBER_PATH, SETTINGS_FILE)
+
+
+    def __init__(self):
+        self.settings_path = Config.SETTINGS_FILEPATH
+        self.cache_folder = Config.CACHE_PATH
         self.parser = SafeConfigParser()
         self.parser.read(self.settings_path)
 
@@ -28,8 +37,17 @@ class Config(object):
         return self.parser.get(page, key)
 
     def get_values(self):
-        self.username = self.parser.get('User', 'username')
-        self.password = self.parser.get('User', 'password')
+        try:
+            self.username = self.parser.get('User', 'username')
+        except ConfigParser.NoOptionError:
+            self.username = ''
+
+        try:
+            self.password = self.parser.get('User', 'password')
+        except ConfigParser.NoOptionError:
+            self.password = ''
+
+
 
     def save(self):
         with open(self.settings_path, 'w') as configfile:
@@ -45,6 +63,9 @@ class Config(object):
     def get_password(self):
         return self.get('User', 'password')
 
+    def get_token(self):
+        return self.get('User', 'token')
+
     def get_image_size(self):
         return int(self.get('Interface', 'thumb_image_size'))
 
@@ -56,3 +77,6 @@ class Config(object):
 
     def set_password(self, value):
         self.set('User', 'password', value)
+
+    def set_token(self, value):
+        self.set('User', 'token', value)

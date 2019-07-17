@@ -1,5 +1,8 @@
 import gtk
 
+from wilber_api import WilberAPIClient
+
+
 class WilberUploadDialog(object):
     def __init__(self, folder):
 
@@ -9,12 +12,14 @@ class WilberUploadDialog(object):
             None,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-            gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+            gtk.STOCK_OK, gtk.RESPONSE_OK))
 
         self.create_widgets()
 
         self.image_filename = None
 
+
+        self.api = WilberAPIClient()
         self.connect_signals()
         self.dialog.connect("destroy", self.destroy)
         self.dialog.show_all()
@@ -124,17 +129,33 @@ class WilberUploadDialog(object):
 
         response = self.dialog.run()
 
-        result = {}
-        result['name'] = self.get_name()
-        result['description'] = self.get_description()
-        result['image'] = self.get_image()
-        result['filenames'] = self.get_filenames()
+        if response == gtk.RESPONSE_OK:
+
+            result = {}
+            result['name'] = self.get_name()
+            result['description'] = self.get_description()
+            result['image'] = self.get_image()
+            result['filenames'] = self.get_filenames()
+
+            self.do_upload(result)
 
 
+        self.dialog.destroy()
 
-        #self.dialog.destroy()
+        return
 
-        return result
+
+    def do_upload(self, data):
+        print('upload')
+
+        name = data['name']
+        description = data['description']
+        image = data['image']
+        filename = data['filenames'][0]
+        category = 'brushes'
+
+        self.api.put_asset(name, category, description, image, filename)
+
 
     def get_filename(self):
         return self.dialog.get_filename()

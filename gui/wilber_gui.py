@@ -3,40 +3,8 @@ from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
 
 
 from wilber_plugin import WilberPlugin
-
-
-
-class WilberConfigDialog(gtk.Dialog):
-    def __init__(self):
-        dialog = gtk.Dialog(
-            "Wilber Config",
-            None,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-            gtk.STOCK_OK, gtk.RESPONSE_ACCEPT)
-        )
-
-        label_username = gtk.Label("Username:")
-        entry_username = gtk.Entry()
-
-        label_password = gtk.Label("Password:")
-        entry_password = gtk.Entry()
-        entry_password.set_visibility(False)
-
-        entry_username.set_text(config.username)
-        entry_password.set_text(config.password)
-
-        dialog.vbox.pack_start(label_username)
-        dialog.vbox.pack_start(entry_username)
-        dialog.vbox.pack_start(label_password)
-        dialog.vbox.pack_start(entry_password)
-        #label.show()
-        #entry.show()
-        checkbox = gtk.CheckButton("Useless checkbox")
-        #dialog.action_area.pack_end(checkbox)
-        checkbox.show()
-        dialog.show_all()
-
+from wilber_gui_upload import WilberUploadDialog
+from wilber_gui_config import WilberConfigDialog
 
 
 
@@ -49,7 +17,10 @@ class WilberGui(object):
         windowicon = self.window.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_LARGE_TOOLBAR)
         self.window.set_icon(windowicon)
 
-        self.image_size = self.settings.get_image_size()
+        #self.image_size = self.settings.get_image_size()
+        self.image_size = 100#self.settings.get_image_size()
+
+
         self.create_widgets()
         self.window.connect("destroy", gtk.mainquit);
 
@@ -116,43 +87,15 @@ class WilberGui(object):
 
     def window_upload(self):
         print("show")
-        self.dialog_upload = gtk_dialog_new_with_buttons('Upload', self.window)
+        #self.dialog_upload = gtk_dialog_new_with_buttons('Upload', self.window)
 
-        self.dialog_upload.show()
+        #self.dialog_upload.show()
 
+        WilberUploadDialog()
 
     def window_config(self):
-
-        dialog = gtk.Dialog("Wilber Config",
-                   self.window,
-                   gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                   (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-                    gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
-
-        label_username = gtk.Label("Username:")
-        entry_username = gtk.Entry()
-
-        label_password = gtk.Label("Password:")
-        entry_password = gtk.Entry()
-        entry_password.set_visibility(False)
-
-        entry_username.set_text(self.settings.get_username())
-        entry_password.set_text(self.settings.get_password())
-
-        self.entry_username = entry_username
-        self.entry_password = entry_password
-
-        dialog.vbox.pack_start(label_username)
-        dialog.vbox.pack_start(entry_username)
-        dialog.vbox.pack_start(label_password)
-        dialog.vbox.pack_start(entry_password)
-        #label.show()
-        #entry.show()
-        checkbox = gtk.CheckButton("Useless checkbox")
-        #dialog.action_area.pack_end(checkbox)
-        checkbox.show()
-        dialog.show_all()
-        return dialog
+        config_dialog = WilberConfigDialog()
+        return config_dialog
 
 
     def download_asset(self, button, asset):
@@ -168,16 +111,19 @@ class WilberGui(object):
         name = self.entry.get_text()
 
     def callback_upload(self, widget, callback_data=None):
-        #dialog = WilberUploadDialog()
-        embed()
-        #dialog = gtk_file_chooser_dialog_new('Upload', self.window)
-        #response = dialog.run()
+        dialog = WilberUploadDialog(self.plugin.get_gimp_folder())
+        response = dialog.run()
 
+        if response == gtk.RESPONSE_OK:
+            print("Do UPLOAD")
+            filename = dialog.get_filename()
+            self.plugin.put_asset(name="Xuxu", file=filename, image=filename, desc="YES", category='brushes')
+
+        dialog.destroy()
+        print("RESPONSE=",response)
 
     def callback_exit(self, widget, callback_data=None):
-        print('trying to quit')
         gtk.main_quit()
-        print('im still here')
 
     def callback_show_config(self, widget, callback_data=None):
         dialog = self.window_config()
@@ -189,3 +135,18 @@ class WilberGui(object):
             self.settings.save()
 
         dialog.destroy()
+
+
+
+
+
+if __name__ == '__main__':
+
+    class Settings(object):
+        pass
+
+    settings = Settings()
+    settings.get_username = lambda:'x'
+    settings.get_password = lambda:'x'
+    dialog = WilberGui(settings)
+    result = dialog.run()

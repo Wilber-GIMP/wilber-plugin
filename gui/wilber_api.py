@@ -1,19 +1,24 @@
+import sys
+from os.path import dirname, realpath, join
+
+PLUGINS_PATH = dirname(realpath(__file__))
+WILBER_LIBS_PATH = join(PLUGINS_PATH, 'libs')
+
+sys.path.insert(0, WILBER_LIBS_PATH)
+
 import requests
 import requests_cache
-#requests_cache.install_cache('/home/darpan/tmp/wilber-cache')
 
-
+from wilber_config import Config
 
 class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
-    def __init__(self, settings):
-        self.settings = settings
+    def __init__(self):
+        self.settings = Config()
         self.token = None
 
-        if settings.get_use_cache():
+        if self.settings.get_use_cache():
             requests_cache.install_cache(self.settings.get_cache_folder())
-        #self.sess = requests.session()
-        #self.cached_sess = CacheControl(self.sess)
 
     def headers(self):
         if self.token:
@@ -22,13 +27,12 @@ class WilberAPIClient(object):
 
     def request_get(self, uri, json=True, **kwargs):
         response = requests.get(uri, headers=self.headers(), **kwargs)
-        #response = self.cached_sess.get(uri, headers=self.headers(), **kwargs)
         if json:
             return response.json()
         return response
 
-    def request_post(self, url, data={}, headers={}, json=True):
-        response = requests.post(url, data=data, headers=headers)
+    def request_post(self, url, data={}, headers={}, files={}, json=True):
+        response = requests.post(url, data=data, headers=headers, files=files)
         if json:
             return response.json()
         return response
@@ -46,17 +50,27 @@ class WilberAPIClient(object):
         response = self.request_post(url, data)
         return response
 
+
+    def get_token(self):
+        token = self.config.get_token()
+
     #API LOGIN
     def login(self, username, password):
-        url = self.URL+'/rest-auth/login/?format=json'
+        url = self.URL+'/api-token-auth/'
         data = {'username':username, 'password':password}
 
         response = self.request_post(url, data)
-        if 'key' in response:
-            self.token = response['key']
+
+        token_key = 'token'
+
+        if token_key in response:
+            self.token = response[token_key]
             return self.token
         else:
-            print(r)
+            print('ERROR')
+            print(response)
+            return None
+
 
     #API GET ASSETS
     def get_assets(self, type=None):
@@ -66,11 +80,11 @@ class WilberAPIClient(object):
         json = self.request_get(url)
         return json['results']
 
-    def put_asset(self, name, type, desc, image, file):
+    def put_asset(self, name, category, desc, image, file):
         url = self.URL + '/api/asset/'
         data = {'name':name,
             'description':desc,
-            'type':type,
+            'category':category,
             }
         files = {
             'image':open(image, 'rb'),

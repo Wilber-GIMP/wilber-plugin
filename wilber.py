@@ -15,18 +15,20 @@ from gimpfu import register, main
 
 
 
-from gui.wilber_gui_main_window import WilberGui
+from gui.wilber_gui import WilberGui
 from gui.wilber_config import Config
 
 
-COMMIT_NUMBER=5
-COMMIT_DATE='2019-06-21'
+COMMIT_NUMBER=9
+COMMIT_DATE='2019-07-16'
 
 
 
 
 def show_version():
-    print("Started Wilber Plugin Version %s %d %s" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
+    path = realpath(__file__)
+    print("Started Wilber Plugin Version %s %d %s\n" % (COMMIT_DATE, COMMIT_NUMBER, datetime.now()))
+    print(path)
 
 
 settings = Config(WILBER_PATH)
@@ -58,5 +60,5 @@ register_params = {
 }
 
 register(**register_params)
-#show_version()
+show_version()
 main()
