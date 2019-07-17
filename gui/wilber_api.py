@@ -7,7 +7,7 @@ from os.path import dirname, realpath, join
 PLUGINS_PATH = dirname(realpath(__file__))
 WILBER_LIBS_PATH = join(PLUGINS_PATH, 'libs')
 sys.path.insert(0, WILBER_LIBS_PATH)
-print('PATH:',WILBER_LIBS_PATH)
+
 import requests
 import requests_cache
 

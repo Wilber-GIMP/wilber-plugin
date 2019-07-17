@@ -9,6 +9,9 @@ from wilber_gui_config import WilberConfigDialog
 from wilber_config import Config
 
 
+assets_cache = {}
+
+
 class WilberGui(object):
     def __init__(self, gimp_directory):
         self.settings = Config()
@@ -24,6 +27,8 @@ class WilberGui(object):
 
 
         self.create_widgets()
+        self.update_asset_listing()
+
         self.window.connect("destroy", gtk.mainquit);
 
         self.connect_signals()
@@ -71,12 +76,35 @@ class WilberGui(object):
 
         self.scrolled_window = gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(480, 480)
-        self.view_port = view_port = gtk.Viewport()
-
-        self.update_asset_listing()
 
 
-        self.scrolled_window.add(view_port)
+
+        #self.view_port = view_port = gtk.Viewport()
+        #self.scrolled_window.add(view_port)
+
+
+        self.model_assets = gtk.ListStore(int, gtk.gdk.Pixbuf, str, bool)
+
+
+        self.treeview = gtk.TreeView(model=self.model_assets)
+        self.scrolled_window.add(self.treeview)
+
+        cell1 = gtk.CellRendererPixbuf()
+        cell2 = gtk.CellRendererText()
+        cell3 = gtk.CellRendererToggle()
+        #cell3.set_activatable(True)
+        cell3.connect("toggled", self.install_asset)
+        #cell3.set_property("activatable", True)
+
+        col1 = gtk.TreeViewColumn('Image', cell1, pixbuf=1)
+        col2 = gtk.TreeViewColumn('Name' , cell2, text=2)
+        col2.set_expand(True)
+        col3 = gtk.TreeViewColumn('Installed' , cell3, active=3)
+        col3.set_clickable(True)
+
+        self.treeview.append_column(col1)
+        self.treeview.append_column(col2)
+        self.treeview.append_column(col3)
 
 
         self.vbox.pack_start(self.hbox_1, False, False,)
@@ -85,62 +113,39 @@ class WilberGui(object):
 
         self.window.add(self.vbox)
 
+    def install_asset(self, cell, row):
+
+
+        asset_id = self.model_assets[int(row)][0]
+        self.download_asset(assets_cache[asset_id])
+
+
+        #v = self.model_assets[int(row)][3]
+        self.model_assets[int(row)][3] = True
 
     def update_asset_listing(self):
 
-        for button in getattr(self, "download_buttons", []):
-            button.destroy()
-
-        if hasattr(self, "table"):
-            self.view_port.remove(self.table)
-            self.table.destroy()
 
         assets = self.plugin.get_assets()
-        self.table = gtk.Table(rows=len(assets), columns=3)
+        print(assets[0])
+        self.model_assets.clear()
 
-        self.download_buttons = []
         for row, asset in enumerate(assets):
+            assets_cache[asset['id']] = asset
             name = asset['name']
+            id = asset['id']
 
-            image = gtk.Image()
             try:
                 pixbuf = pixbuf_new_from_file_at_size(asset['image_path'], self.image_size, self.image_size)
-                image.set_from_pixbuf(pixbuf)
+
             except Exception as e:
                 print(e)
 
-            button = gtk.Button('Download')
-            button.connect("clicked", self.download_asset, asset)
-            self.download_buttons.append(button)
-
-            self.table.attach(image, 0, 1, row, row+1, False, False, xpadding=6)
-            self.table.attach(gtk.Label(name), 1 , 2, row, row+1, False, False, xpadding=6)
-            self.table.attach(button, 2,3, row, row+1, False, False, xpadding=6)
-
-        self.table.show_all()
-        self.view_port.add(self.table)
+            self.model_assets.append([id, pixbuf, name, False])
 
 
-        #self.vbox.pack_start(self.hbox_1, False, False,)
-        #self.vbox.pack_start(self.scrolled_window, True, True)
-        #self.vbox.pack_start(self.hbox_2, False, False)
 
-        #self.window.add(self.vbox)
-
-    def window_upload(self):
-        print("show")
-        #self.dialog_upload = gtk_dialog_new_with_buttons('Upload', self.window)
-
-        #self.dialog_upload.show()
-
-        WilberUploadDialog()
-
-    def window_config(self):
-        config_dialog = WilberConfigDialog()
-        return config_dialog
-
-
-    def download_asset(self, button, asset):
+    def download_asset(self, asset):
         self.set_status("Downloading '%s' " % asset["name"], timeout=None)
         self.plugin.download_asset(asset)
         self.hide_status()
