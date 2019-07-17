@@ -36,6 +36,9 @@ class WilberAPIClient(object):
 
     def request_post(self, url, data={}, headers={}, files={}, json=True):
         response = requests.post(url, data=data, headers=headers, files=files)
+        print(response.status_code)
+        if response.status_code != 200:
+            print(response.content)
         if json:
             return response.json()
         return response
@@ -78,14 +81,13 @@ class WilberAPIClient(object):
         url = self.URL + '/api/asset/'
         data = {'name': name,
             'description': description,
-            'type': type,
+            'category': type,
             }
         files = {
             'file': open(file, 'rb'),
         }
         if image:
             files["image"] = open(image, "rb")
-
 
         response = self.request_post(url, data=data, files=files, headers=self.headers(), json=False)
         return response

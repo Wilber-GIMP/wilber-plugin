@@ -16,6 +16,16 @@ import gimpfu
 #Wilber imports
 from wilber_api import WilberAPIClient
 
+ASSET_TYPE_TO_CATEGORY = {
+    "brush": "brushes",
+    "pattern": "patterns",
+    "gradient": "gradients",
+    "plug-in": "plug-ins",
+    "palette": "palettes",
+    "preset": "presets",
+
+}
+
 class WilberPlugin(object):
     def __init__(self, settings):
         self.settings = settings
@@ -106,7 +116,7 @@ class WilberPlugin(object):
         description = response["description"]
         response.clear()
         response["name"] = name
-        response["type"] = self.current_asset_type
+        response["type"] = ASSET_TYPE_TO_CATEGORY[self.current_asset_type]
         response["description"] = description # self.ensure_tags_in_descritpion(response["description"])
         response["image"] = thumbnail_new_path
         response["file"] = filename
