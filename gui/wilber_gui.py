@@ -9,6 +9,8 @@ from gtk.gdk import pixbuf_new_from_file_at_size
 
 from wilber_plugin import WilberPlugin
 from wilber_gui_upload import WilberUploadDialog
+from wilber_common import ASSET_TYPE_TO_CATEGORY
+
 
 
 try:
@@ -73,11 +75,23 @@ class WilberGui(object):
         gtk.main()
 
 
+    def category_changed(self, *argss):
+        self.plugin.current_asset_type = self.category_dropdown.get_active_text()
+        self.update_asset_listing()
+
     def create_widgets(self):
         self.vbox = gtk.VBox(spacing=10)
 
         self.status_bar = gtk.Label("")
         self.vbox.pack_start(self.status_bar)
+
+        self.category_dropdown = gtk.combo_box_new_text()
+        for asset_type in ASSET_TYPE_TO_CATEGORY.keys():
+            self.category_dropdown.append_text(asset_type)
+
+        self.category_dropdown.connect("changed", self.category_changed)
+        self.vbox.pack_start(self.category_dropdown)
+
 
         self.hbox_1 = gtk.HBox(spacing=10)
         self.label = gtk.Label("Search:")
@@ -98,11 +112,35 @@ class WilberGui(object):
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_size_request(480, 480)
-        view_port = gtk.Viewport()
+        self.view_port = view_port = gtk.Viewport()
 
-        self.table = gtk.Table(rows=7, columns=3)
+        self.update_asset_listing()
 
-        for row, asset in enumerate(self.plugin.get_assets()):
+
+        scrolled_window.add(view_port)
+
+
+        self.vbox.pack_start(self.hbox_1, False, False,)
+        self.vbox.pack_start(scrolled_window, True, True)
+        self.vbox.pack_start(self.hbox_2, False, False)
+
+        self.window.add(self.vbox)
+
+
+    def update_asset_listing(self):
+
+        for button in getattr(self, "download_buttons", []):
+            button.destroy()
+
+        if hasattr(self, "table"):
+            self.view_port.remove(self.table)
+            self.table.destroy()
+
+        assets = self.plugin.get_assets()
+        self.table = gtk.Table(rows=len(assets), columns=3)
+
+        self.download_buttons = []
+        for row, asset in enumerate(assets):
             name = asset['name']
 
             image = gtk.Image()
@@ -114,21 +152,14 @@ class WilberGui(object):
 
             button = gtk.Button('Download')
             button.connect("clicked", self.download_asset, asset)
+            self.download_buttons.append(button)
 
             self.table.attach(image, 0, 1, row, row+1, False, False, xpadding=6)
             self.table.attach(gtk.Label(name), 1 , 2, row, row+1, False, False, xpadding=6)
             self.table.attach(button, 2,3, row, row+1, False, False, xpadding=6)
 
-        view_port.add(self.table)
-        scrolled_window.add(view_port)
-
-
-        self.vbox.pack_start(self.hbox_1, False, False,)
-        self.vbox.pack_start(scrolled_window, True, True)
-        self.vbox.pack_start(self.hbox_2, False, False)
-
-        self.window.add(self.vbox)
-
+        self.table.show_all()
+        self.view_port.add(self.table)
 
     def window_config(self):
 
