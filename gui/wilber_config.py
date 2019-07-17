@@ -63,3 +63,6 @@ class Config(object):
 
     def set_password(self, value):
         self.set('User', 'password', value)
+
+    def get_server_url(self):
+        return self.get('Server', 'server_url')

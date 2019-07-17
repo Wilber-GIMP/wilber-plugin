@@ -14,6 +14,7 @@ class WilberAPIClient(object):
     URL = 'http://127.0.0.1:8000'
     def __init__(self, settings):
         self.settings = settings
+        self.URL = settings.get_server_url()
         self.token = None
 
         if settings.get_use_cache():
