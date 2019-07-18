@@ -1,15 +1,17 @@
+from os.path import basename,join
+
 import gtk
 import glib
 from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
 
-from wilber_common import ASSET_TYPE_TO_CATEGORY
+from wilber_common import Asset, ASSET_TYPE_TO_CATEGORY
 from wilber_plugin import WilberPlugin
 from wilber_gui_upload import WilberUploadDialog
 from wilber_gui_config import WilberConfigDialog
 from wilber_config import Config
 
 
-assets_cache = {}
+
 
 
 class WilberGui(object):
@@ -17,6 +19,8 @@ class WilberGui(object):
         self.settings = Config()
         self.gimp_directory = gimp_directory
         self.plugin = WilberPlugin(self.settings)
+        Asset.plugin = self.plugin
+
         self.window = gtk.Window()
         self.window.set_title("Wilber Asset Manager")
         windowicon = self.window.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_LARGE_TOOLBAR)
@@ -54,7 +58,7 @@ class WilberGui(object):
             self.category_dropdown.append_text(asset_type)
 
         self.category_dropdown.connect("changed", self.category_changed)
-        self.vbox.pack_start(self.category_dropdown)
+
 
 
         self.hbox_1 = gtk.HBox(spacing=10)
@@ -63,24 +67,20 @@ class WilberGui(object):
         self.entry = gtk.Entry()
         self.hbox_1.pack_start(self.entry)
 
-        self.button_config = gtk.Button("Config")
-        self.hbox_1.pack_start(self.button_config)
+        self.button_config = gtk.Button("Login")
+        self.hbox_1.pack_start(self.category_dropdown)
 
         self.hbox_2 = gtk.HButtonBox()
         self.button_exit = gtk.Button("Exit")
         self.button_upload = gtk.Button("Upload")
 
+        self.hbox_2.pack_start(self.button_config)
         self.hbox_2.pack_start(self.button_upload)
         self.hbox_2.pack_start(self.button_exit)
 
 
         self.scrolled_window = gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(480, 480)
-
-
-
-        #self.view_port = view_port = gtk.Viewport()
-        #self.scrolled_window.add(view_port)
 
 
         self.model_assets = gtk.ListStore(int, gtk.gdk.Pixbuf, str, bool)
@@ -93,7 +93,7 @@ class WilberGui(object):
         cell2 = gtk.CellRendererText()
         cell3 = gtk.CellRendererToggle()
         #cell3.set_activatable(True)
-        cell3.connect("toggled", self.install_asset)
+        cell3.connect("toggled", self.toggle_asset)
         #cell3.set_property("activatable", True)
 
         col1 = gtk.TreeViewColumn('Image', cell1, pixbuf=1)
@@ -113,43 +113,54 @@ class WilberGui(object):
 
         self.window.add(self.vbox)
 
-    def install_asset(self, cell, row):
 
-
+    def toggle_asset(self, cell, row):
         asset_id = self.model_assets[int(row)][0]
-        self.download_asset(assets_cache[asset_id])
+        is_installed = Asset.get(asset_id).is_installed()
+        if is_installed:
+            self.remove_asset(asset_id)
+        else:
+            self.install_asset(asset_id)
+
+        self.model_assets[int(row)][3] = not is_installed
+
+    def remove_asset(self, asset_id):
+        asset = Asset.get(asset_id)
+        self.set_status("Removing '%s' " % asset.name, timeout=None)
+        self.plugin.remove_asset(Asset.get_asset(asset_id))
+
+        self.set_status("Asset '%s' removed" % asset.name, timeout=5000)
+
+    def install_asset(self, asset_id):
+        asset = Asset.get(asset_id)
+
+        self.set_status("Downloading '%s' " % asset.name, timeout=None)
+        self.plugin.download_asset(asset.dic)
+        self.hide_status()
+        self.set_status("Asset '%s' downloaded" % asset.name, timeout=5000)
 
 
-        #v = self.model_assets[int(row)][3]
-        self.model_assets[int(row)][3] = True
+
 
     def update_asset_listing(self):
-
-
         assets = self.plugin.get_assets()
-        print(assets[0])
         self.model_assets.clear()
 
-        for row, asset in enumerate(assets):
-            assets_cache[asset['id']] = asset
-            name = asset['name']
-            id = asset['id']
+        for row, asset_dic in enumerate(assets):
+            asset = Asset(asset_dic)
 
             try:
-                pixbuf = pixbuf_new_from_file_at_size(asset['image_path'], self.image_size, self.image_size)
+                pixbuf = pixbuf_new_from_file_at_size(asset.image_path, self.image_size, self.image_size)
 
             except Exception as e:
                 print(e)
 
-            self.model_assets.append([id, pixbuf, name, False])
+            is_installed = asset.is_installed()
+            self.model_assets.append([asset.id, pixbuf, asset.name, is_installed])
 
 
 
-    def download_asset(self, asset):
-        self.set_status("Downloading '%s' " % asset["name"], timeout=None)
-        self.plugin.download_asset(asset)
-        self.hide_status()
-        self.set_status("Asset '%s' downloaded" % asset["name"], timeout=5000)
+
 
     def connect_signals(self):
         self.button_exit.connect("clicked", self.callback_exit)
@@ -194,15 +205,13 @@ class WilberGui(object):
         gtk.main_quit()
 
     def callback_show_config(self, widget, callback_data=None):
-        dialog = self.window_config()
+        dialog = WilberConfigDialog()
         response = dialog.run()
 
         if response==gtk.RESPONSE_ACCEPT:
             self.settings.set_username(self.entry_username.get_text())
             self.settings.set_password(self.entry_password.get_text())
             self.settings.save()
-
-        dialog.destroy()
 
 
 
@@ -217,4 +226,4 @@ if __name__ == '__main__':
     settings.get_username = lambda:'x'
     settings.get_password = lambda:'x'
     dialog = WilberGui(settings)
-    result = dialog.run()
+    #result = dialog.run()

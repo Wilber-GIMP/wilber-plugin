@@ -68,6 +68,9 @@ class WilberConfigDialog(object):
 
         self.dialog.destroy()
 
+    def destroy(self):
+        self.dialog.destroy()
+
 if __name__ == '__main__':
     dialog = WilberConfigDialog()
     result = dialog.run()

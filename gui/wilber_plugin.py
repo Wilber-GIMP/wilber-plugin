@@ -6,25 +6,50 @@ import errno
 import os
 import sqlite3
 from os import path
+from os.path import join,basename
 import shutil
+from collections import defaultdict
 
 #GIMP imports
 
-from gimpfu import gimp, pdb
-import gimpfu
+#from gimpfu import pdb, gimp
+
+
+
+try:
+    from gimpfu import gimp
+    GIMP_DIRECTORY = gimp.directory
+except:
+    GIMP_DIRECTORY = path.expanduser('~/.config/GIMP/2.10')
 
 
 #Wilber imports
 from wilber_api import WilberAPIClient
-from wilber_common import ASSET_TYPE_TO_CATEGORY
+from wilber_common import Asset, ASSET_TYPE_TO_CATEGORY
+#from wilber_common import ASSET_TYPE_TO_CATEGORY
 
+
+GIMP_FOLDERS = [
+    'brushes',
+    'gradients',
+    'palettes',
+    'patterns',
+    'plug-ins',
+    'scripts',
+    'tool-options',
+    'tool-presets',
+]
 
 class WilberPlugin(object):
     def __init__(self, settings):
         self.settings = settings
+        self.gimp_directory = GIMP_DIRECTORY
+        Asset.gimp_directory = GIMP_DIRECTORY
         self.api = WilberAPIClient()
         self.db = self.init_db()
         self.current_asset_type = "brush"
+        self.installed = {}
+        self.update_installed()
 
     def init_db(self):
         db_path = os.path.join(self.get_wilber_folder(), 'wilber_db.sqlite')
@@ -32,7 +57,7 @@ class WilberPlugin(object):
         return db
 
     def get_wilber_folder(self):
-        wilber_folder = path.join(gimp.directory, 'plug-ins', 'wilber')
+        wilber_folder = path.join(self.gimp_directory, 'plug-ins', 'wilber')
         if not os.path.exists(wilber_folder):
             self.mkdirs(wilber_folder)
         return wilber_folder
@@ -76,15 +101,31 @@ class WilberPlugin(object):
         shutil.move(filepath, destination_folder)
         final_path = os.path.join(destination_folder, os.path.basename(filepath))
 
+
         category = asset["category"]
-        if category in "brushes gradients palettes dynamics fonts palette patterns":
-            procedure = getattr(pdb, "gimp_%s_refresh" % category)
-            procedure()
+        self.update_gimp(category)
+
         print("Asset downloaded and moved to '%s'" % final_path)
+        self.update_installed()
+
+    def update_gimp(self, category):
+        try:
+            from gimpfu import pdb
+            if category in "brushes gradients palettes dynamics fonts palette patterns":
+                procedure = getattr(pdb, "gimp_%s_refresh" % category)
+                procedure()
+        except Exception as e:
+            print(e)
+
+    def remove_asset(self, asset):
+        local = Asset(asset).local_folder()
+        print('Removing ', local)
+        os.remove(local)
+        self.update_installed()
 
 
     def get_gimp_folder(self, asset):
-        folder = os.path.join(gimp.directory, asset.get("category", "NONEXISTENT"))
+        folder = os.path.join(self.gimp_directory, asset.get("category", "NONEXISTENT"))
         if not os.path.exists(folder):
             return None
         return folder
@@ -100,6 +141,7 @@ class WilberPlugin(object):
         return assets
 
     def sanitize_response(self, response):
+        from gimpfu import pdb
         try:
             filename = response.pop("filenames")[0]
         except (KeyError, IndexError):
@@ -150,6 +192,15 @@ class WilberPlugin(object):
                 new_width = img.width * (new_height / img.height)
             pdb.gimp_image_scale(img, new_width, new_height)
         return
+
+    def update_installed(self):
+        for folder in GIMP_FOLDERS:
+            self.installed[folder] = os.listdir(join(self.gimp_directory, folder))
+
+    def asset_is_installed(self, asset):
+        filename = basename(asset['file'])
+        folder = asset['folder']
+        return filename in self.installed[folder]
 
 
 def slugify(name):
