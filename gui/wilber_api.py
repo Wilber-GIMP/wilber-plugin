@@ -9,7 +9,7 @@ WILBER_LIBS_PATH = join(PLUGINS_PATH, 'libs')
 sys.path.insert(0, WILBER_LIBS_PATH)
 
 import requests
-import requests_cache
+#import requests_cache
 
 from wilber_config import Config
 from wilber_common import ASSET_TYPE_TO_CATEGORY
@@ -19,15 +19,17 @@ class WilberAPIClient(object):
     def __init__(self):
         self.settings = Config()
         self.URL = self.settings.get_server_url()
-        self.URL = 'http://127.0.0.1:8000'
         self.token = None
 
-        if self.settings.get_use_cache():
-            requests_cache.install_cache(self.settings.get_cache_folder())
+        #if self.settings.get_use_cache():
+        #    requests_cache.install_cache(self.settings.get_cache_folder())
 
     def headers(self):
         if not self.token:
-            self.login(self.settings.username, self.settings.password)
+            if self.settings.token:
+                self.token = self.settings.token
+            else:
+                self.login(self.settings.username, self.settings.password)
         if self.token:
             return {'Authorization': 'Token %s' % self.token}
         return {}
@@ -83,10 +85,13 @@ class WilberAPIClient(object):
     #API GET ASSETS
     def get_assets(self, type_=None):
         url = self.URL + '/api/asset/'
+        print('\n\nConnecting to ', url)
+
         params = {"format": "json"}
         if type_:
             params["category"] = ASSET_TYPE_TO_CATEGORY[type_]
         json_data = self.request_get(url, params=params)
+        print(json_data)
         return json_data['results']
 
     def put_asset(self, name, category, description, image, file):

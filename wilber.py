@@ -43,5 +43,5 @@ register_params = {
 }
 
 register(**register_params)
-#show_version()
+show_version()
 main()

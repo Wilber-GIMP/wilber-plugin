@@ -42,6 +42,7 @@ class Config(object):
         try:
             self.username = self.parser.get('User', 'username')
             self.password = self.parser.get('User', 'password')
+            self.token = self.parser.get('User', 'token')
         except NoSectionError:
             self.username = ''
             self.password = ''
