@@ -37,7 +37,7 @@ class WilberAPIClient(object):
             return {'Authorization': 'Token %s' % self.token}
         return {}
 
-    def request_get(self, uri, json=True, headers=False, **kwargs):
+    def request_get(self, uri, json=True, headers=True, **kwargs):
         try:
             if headers:
                 response = requests.get(uri, headers=self.headers(), **kwargs)
