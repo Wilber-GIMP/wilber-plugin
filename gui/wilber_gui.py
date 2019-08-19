@@ -1,5 +1,5 @@
 from os.path import basename,join
-
+import logging
 import gtk
 import glib
 from gtk.gdk import Pixbuf, pixbuf_new_from_stream, pixbuf_new_from_file_at_size
@@ -9,10 +9,9 @@ from wilber_plugin import WilberPlugin
 from wilber_gui_upload import WilberUploadDialog
 from wilber_gui_config import WilberConfigDialog
 from wilber_config import Config
+from wilber_log import logger
 
-
-
-
+logger = logging.getLogger('wilber.gui')
 
 class WilberGui(object):
     def __init__(self, gimp_directory):
@@ -26,12 +25,13 @@ class WilberGui(object):
         windowicon = self.window.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_LARGE_TOOLBAR)
         self.window.set_icon(windowicon)
 
-        #self.image_size = self.settings.get_image_size()
-        self.image_size = 100#self.settings.get_image_size()
+        self.image_size = self.settings.get_image_size()
+        #self.image_size = 100#self.settings.get_image_size()
 
 
         self.create_widgets()
-        self.update_asset_listing()
+
+
 
         self.window.connect("destroy", gtk.mainquit);
 
@@ -40,12 +40,15 @@ class WilberGui(object):
         self.window.show_all()
         self.hide_status()
 
+
+
+        self.load_assets(clear=True)
         gtk.main()
 
 
     def category_changed(self, *argss):
         self.plugin.current_asset_type = self.category_dropdown.get_active_text()
-        self.update_asset_listing()
+        self.load_assets(clear=True)
 
     def create_widgets(self):
         self.vbox = gtk.VBox(spacing=10)
@@ -64,8 +67,8 @@ class WilberGui(object):
         self.hbox_1 = gtk.HBox(spacing=10)
         self.label = gtk.Label("Search:")
         self.hbox_1.pack_start(self.label, False)
-        self.entry = gtk.Entry()
-        self.hbox_1.pack_start(self.entry)
+        self.entry_search = gtk.Entry()
+        self.hbox_1.pack_start(self.entry_search)
 
         self.button_config = gtk.Button("Login")
         self.hbox_1.pack_start(self.category_dropdown)
@@ -73,9 +76,12 @@ class WilberGui(object):
         self.hbox_2 = gtk.HButtonBox()
         self.button_exit = gtk.Button("Exit")
         self.button_upload = gtk.Button("Upload")
+        self.button_more = gtk.Button("More")
+        self.button_more.set_sensitive(False)
 
         self.hbox_2.pack_start(self.button_config)
         self.hbox_2.pack_start(self.button_upload)
+        self.hbox_2.pack_start(self.button_more)
         self.hbox_2.pack_start(self.button_exit)
 
 
@@ -106,6 +112,7 @@ class WilberGui(object):
         self.treeview.append_column(col2)
         self.treeview.append_column(col3)
 
+        self.treeview.set_search_column(2)
 
         self.vbox.pack_start(self.hbox_1, False, False,)
         self.vbox.pack_start(self.scrolled_window, True, True)
@@ -140,23 +147,34 @@ class WilberGui(object):
         self.set_status("Asset '%s' downloaded" % asset.name, timeout=5000)
 
 
+    def load_assets(self, query=None, clear=False, more=False):
+        if more:
+            assets, has_more = self.plugin.get_assets(more=more)
+        elif query:
+            assets, has_more = self.plugin.get_assets(query=query)
+        else:
+            assets, has_more = self.plugin.get_assets()
+        if assets:
+            if clear:
+                self.model_assets.clear()
+            self.update_asset_listing(assets)
+
+            if has_more:
+                self.button_more.set_sensitive(True)
+            else:
+                self.button_more.set_sensitive(False)
 
 
-    def update_asset_listing(self):
-        assets = self.plugin.get_assets()
-        self.model_assets.clear()
-
+    def update_asset_listing(self, assets):
         for row, asset_dic in enumerate(assets):
             asset = Asset(asset_dic)
-
             try:
                 pixbuf = pixbuf_new_from_file_at_size(asset.image_path, self.image_size, self.image_size)
-
             except Exception as e:
                 print(e)
-
             is_installed = asset.is_installed()
             self.model_assets.append([asset.id, pixbuf, asset.name, is_installed])
+
 
 
 
@@ -166,7 +184,17 @@ class WilberGui(object):
         self.button_exit.connect("clicked", self.callback_exit)
         self.button_upload.connect("clicked", self.callback_upload)
         self.button_config.connect("clicked", self.callback_show_config)
+        self.entry_search.connect("activate", self.callback_search)
 
+        self.button_more.connect("clicked", self.callback_load_more)
+
+    def callback_search(self, widget, callback_data=None):
+        query = self.entry_search.get_text()
+        self.load_assets(query)
+
+    def callback_load_more(self, widget):
+        logger.info("Load More")
+        self.load_assets(more=True)
 
     def callback_ok(self, widget, callback_data=None):
         name = self.entry.get_text()

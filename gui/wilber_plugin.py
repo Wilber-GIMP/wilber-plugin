@@ -5,15 +5,10 @@ from __future__ import print_function, unicode_literals, division
 import errno
 import os
 import sqlite3
-from os import path
-from os.path import join,basename
 import shutil
-from collections import defaultdict
-
-#GIMP imports
-
-#from gimpfu import pdb, gimp
-
+import logging
+from os import path
+from os.path import join, basename
 
 
 try:
@@ -23,11 +18,13 @@ except:
     GIMP_DIRECTORY = path.expanduser('~/.config/GIMP/2.10')
 
 
-#Wilber imports
+# Wilber imports
 from wilber_api import WilberAPIClient
 from wilber_common import Asset, ASSET_TYPE_TO_CATEGORY
-#from wilber_common import ASSET_TYPE_TO_CATEGORY
+from wilber_log import logger
 
+
+logger = logging.getLogger('wilber.plugin')
 
 GIMP_FOLDERS = [
     'brushes',
@@ -39,6 +36,7 @@ GIMP_FOLDERS = [
     'tool-options',
     'tool-presets',
 ]
+
 
 class WilberPlugin(object):
     def __init__(self, settings):
@@ -79,7 +77,7 @@ class WilberPlugin(object):
             return url.rsplit('/', 1)[1]
 
     def download_file(self, url, folder='thumbs'):
-        print('Downloading', url)
+        logger.info('Downloading %s' % url)
         response = self.api.request_get(url, allow_redirects=True, json=False)
         filename = self.get_filename_from_url(url)
         filedir = path.join(self.get_wilber_folder(), folder)
@@ -100,7 +98,6 @@ class WilberPlugin(object):
             return
         shutil.move(filepath, destination_folder)
         final_path = os.path.join(destination_folder, os.path.basename(filepath))
-
 
         category = asset["category"]
         self.update_gimp(category)
@@ -123,22 +120,21 @@ class WilberPlugin(object):
         os.remove(local)
         self.update_installed()
 
-
     def get_gimp_folder(self, asset):
         folder = os.path.join(self.gimp_directory, asset.get("category", "NONEXISTENT"))
         if not os.path.exists(folder):
             return None
         return folder
 
-
-    def get_assets(self):
-        assets = self.api.get_assets(type_=self.current_asset_type)
-
-        for asset in assets:
-            url = asset['image']
-            filepath = self.download_file(url)
-            asset['image_path'] = filepath
-        return assets
+    def get_assets(self, query=None, more=False):
+        assets, has_more = self.api.get_assets(type_=self.current_asset_type, query=query, more=more)
+        if assets:
+            for asset in assets:
+                url = asset['image_thumbnail']
+                filepath = self.download_file(url)
+                asset['image_path'] = filepath
+            return assets, has_more
+        return None
 
     def sanitize_response(self, response):
         from gimpfu import pdb
@@ -172,16 +168,13 @@ class WilberPlugin(object):
         response.clear()
         response["name"] = name
         response["category"] = ASSET_TYPE_TO_CATEGORY[self.current_asset_type]
-        response["description"] = description # self.ensure_tags_in_descritpion(response["description"])
+        response["description"] = description  # self.ensure_tags_in_descritpion(response["description"])
         response["image"] = thumbnail_new_path
         response["file"] = filename
         return True
 
-
-
-
     def constrain_thumbnail_size(self, img, requested_size):
-
+        from gimpfu import pdb
         if img.width < requested_size or img.width > 3 * requested_size:
             # Do not allow too little images that would not work as thumbnails:
             new_width = requested_size
@@ -200,7 +193,9 @@ class WilberPlugin(object):
     def asset_is_installed(self, asset):
         filename = basename(asset['file'])
         folder = asset['folder']
-        return filename in self.installed[folder]
+        if folder in self.installed:
+            return filename in self.installed[folder]
+        return False
 
 
 def slugify(name):
