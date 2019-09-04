@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import unicode_literals, print_function, division
 from wilber_common import ASSET_TYPE_TO_CATEGORY
+from os.path import splitext, basename, getsize
 import os
 import logging
 import gtk
@@ -9,6 +10,56 @@ import gtk
 DEBUG = False
 
 logger = logging.getLogger('wilber.gui.upload')
+
+
+class FileValidator(object):
+    extension_message = "Extension '%(extension)s' of file '%(filename)s' not allowed. Allowed extensions are: '%(allowed_extensions)s.'"
+    min_size_message = "'%(filename)s' file has %(size)s, which is too small. The minumum file size is %(allowed_size)s."
+    max_size_message = "'%(filename)s' file has %(size)s, which is too large. The maximum file size is %(allowed_size)s."
+
+    def __init__(self, *args, **kwargs):
+        self.allowed_extensions = kwargs.pop('allowed_extensions', None)
+        self.min_size = kwargs.pop('min_size', 1)
+        self.max_size = kwargs.pop('max_size', 20 * 10**20)  # 20 MiB
+
+    def __call__(self, filepath):
+        # Check the extension
+        self.filename = basename(filepath)
+        self.ext = splitext(filepath)[1].lower()
+
+        if self.allowed_extensions and self.ext not in self.allowed_extensions:
+            message = self.extension_message % {
+                'filename': self.filename,
+                'extension': self.ext,
+                'allowed_extensions': ', '.join(self.allowed_extensions)
+            }
+            return False, message
+
+        filesize = getsize(filepath)
+        if self.max_size and filesize > self.max_size:
+            message = self.max_size_message % {
+                'filename': self.filename,
+                'size': self.filesizeformat(filesize),
+                'allowed_size': self.filesizeformat(self.max_size)
+            }
+            return False, message
+
+        elif filesize < self.min_size:
+            message = self.min_size_message % {
+                'filename': self.filename,
+                'size': self.filesizeformat(filesize),
+                'allowed_size': self.filesizeformat(self.min_size)
+            }
+            return False, message
+
+        return True, ''
+
+    def filesizeformat(self, num, suffix='B'):
+        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+            if abs(num) < 1024.0:
+                return "%3.1f%s%s" % (num, unit, suffix)
+            num /= 1024.0
+        return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
 class Folder(object):
@@ -48,6 +99,9 @@ class WilberUploadDialog(object):
         label_name = gtk.Label("Name:")
         label_description = gtk.Label("Description:")
         label_category = gtk.Label("Category:")
+        self.status_message = gtk.Label("Message Message Message")
+        self.status_message.set_line_wrap(True)
+
         self.button_select_image = gtk.Button("Select Thumbnail")
         self.button_add_file = gtk.Button("Add File")
         self.button_remove_file = gtk.Button("Remove Selected")
@@ -86,6 +140,11 @@ class WilberUploadDialog(object):
         table.attach(self.image_widget,         1, 2, 2, 3, gtk.EXPAND | gtk.FILL, gtk.FILL, 5, 5)
         table.attach(self.category_dropdown,    1, 2, 3, 4, gtk.EXPAND | gtk.FILL, False, 5, 5)
         table.attach(scrollable_view,           1, 2, 4, 6, gtk.EXPAND | gtk.FILL, gtk.EXPAND | gtk.FILL, 5, 5)
+
+        table.attach(self.status_message,       0, 2, 6, 7, False, False, 5, 5)
+
+    def set_message(self, message):
+        self.status_message.set_text(message)
 
     def connect_signals(self):
         self.button_select_image.connect("clicked", self.select_image)
@@ -167,10 +226,10 @@ class WilberUploadDialog(object):
     def grab_data(self):
         return {
             'name': self.get_name(),
-            'description':  self.get_description(),
-            'category':  self.get_category(),
-            'image':  self.get_image(),
-            'filenames':  self.get_filenames(),
+            'description': self.get_description(),
+            'category': self.get_category(),
+            'image': self.get_image(),
+            'filenames': self.get_filenames(),
         }
 
     def run(self):
@@ -179,17 +238,41 @@ class WilberUploadDialog(object):
         self.dialog.destroy()
         return response, data
 
+    def validate_files(self, category, filenames):
+        validators = {
+            "brushes": FileValidator(allowed_extensions=['.gbr', '.vbr', '.gih']),
+            "patterns": FileValidator(allowed_extensions=['.pat']),
+            "gradients": FileValidator(allowed_extensions=['.ggr']),
+            "plug-ins": FileValidator(allowed_extensions=['.py', '.zip']),
+            "palettes": FileValidator(allowed_extensions=['.gpl']),
+            "tool-presets": FileValidator(allowed_extensions=['.gtp']),
+        }
+
+        validator = validators[category]
+        validations = [validator(filename) for filename in filenames]
+        result = all([i[0] for i in validations])
+        message = ' '.join([i[1] for i in validations])
+        return result, message
+
     def validate_data(self, widget=None, event=None):
         data = self.grab_data()
         if not all(data.values()):
             self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, False)
-            invalid = [k for k, v in data.items() if not v]
-            logger.info('Invalid Data: '+', '.join(invalid))
+            void_fields = [k for k, v in data.items() if not v]
+            logger.info('Invalid Data: ' + ', '.join(void_fields))
+            self.set_message("Please fill the fields: " + ', '.join(void_fields))
             return False
         else:
-            self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, True)
-            logger.info('Data is valid')
-            return True
+            valid, message = self.validate_files(data['category'], data['filenames'])
+            if not valid:
+                self.set_message(message)
+                self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, False)
+                return False
+
+        self.set_message("")
+        self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, True)
+        logger.info('Data is valid')
+        return True
 
     def destroy(self, widget, data=None):
         if DEBUG:
