@@ -1,16 +1,16 @@
 # coding: utf-8
 from __future__ import unicode_literals, print_function, division
 from os.path import basename, join
+from collections import OrderedDict
 
-ASSET_TYPE_TO_CATEGORY = {
-    "brush": "brushes",
-    "pattern": "patterns",
-    "gradient": "gradients",
-    "plug-in": "plug-ins",
-    "palette": "palettes",
-    "preset": "presets",
-
-}
+ASSET_TYPE_TO_CATEGORY = OrderedDict([
+    ("Brush", "brushes"),
+    ("Pattern", "patterns"),
+    ("Gradient", "gradients"),
+    ("Plug-in", "plug-ins"),
+    ("Palette", "palettes"),
+    ("Preset", "tool-presets"),
+])
 
 
 class Asset(object):
