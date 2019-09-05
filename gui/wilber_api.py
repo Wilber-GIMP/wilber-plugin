@@ -108,12 +108,12 @@ class WilberAPIClient(object):
         if query:
             params["search"] = query
 
-        json_data = self.request_get(url, params=params)
+        json_data = self.request_get(url, params=params, headers=False)
         if json_data and 'results' in json_data:
             self.next_url = json_data['next']
             return json_data['results'], json_data['next']
 
-        return None
+        return None, None
 
     def put_asset(self, name, category, description, image, file):
         url = self.URL + '/api/asset/'

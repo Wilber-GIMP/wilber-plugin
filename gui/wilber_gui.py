@@ -40,9 +40,7 @@ class WilberGui(object):
         self.window.show_all()
         self.hide_status()
 
-
-
-        self.load_assets(clear=True)
+        self.category_changed()
         gtk.main()
 
 
@@ -59,7 +57,7 @@ class WilberGui(object):
         self.category_dropdown = gtk.combo_box_new_text()
         for asset_type in ASSET_TYPE_TO_CATEGORY.keys():
             self.category_dropdown.append_text(asset_type)
-
+        self.category_dropdown.set_active(0)
         self.category_dropdown.connect("changed", self.category_changed)
 
 
@@ -213,16 +211,19 @@ class WilberGui(object):
         dialog = WilberUploadDialog(self.gimp_directory)
 
         response, response_data = dialog.run()
-        if  response not in (gtk.RESPONSE_OK, gtk.RESPONSE_ACCEPT):
-            self.set_status("Upload canceled", 1500)
-        response_ok = self.plugin.sanitize_response(response_data)
-        if not response_ok:
-            self.set_status("Incorrect or insuficient data to upload", 1500)
+        if response not in (gtk.RESPONSE_OK, gtk.RESPONSE_ACCEPT):
+            self.set_status("Upload canceled", 3500)
             return
+        #response_ok = self.plugin.sanitize_response(response_data)
+        #if not response_ok:
+        #    self.set_status("Incorrect or insuficient data to upload", 1500)
+        #    return
 
         self.set_status("Uploading asset '%s' " % response_data["name"], timeout=None)
 
-        upload_response = self.plugin.api.put_asset(**response_data)
+        upload_response = self.plugin.upload_asset(**response_data)
+
+        #upload_response = self.plugin.api.put_asset(**response_data)
         self.hide_status()
         if upload_response.status_code < 399:
             self.set_status("Asset '%s' uploaded successfuly" % response_data["name"], 5000)
@@ -247,11 +248,6 @@ class WilberGui(object):
 
 if __name__ == '__main__':
 
-    class Settings(object):
-        pass
-
-    settings = Settings()
-    settings.get_username = lambda:'x'
-    settings.get_password = lambda:'x'
-    dialog = WilberGui(settings)
+    from os.path import expanduser
+    dialog = WilberGui(gimp_directory=expanduser('~/.config/GIMP/2.10'))
     #result = dialog.run()

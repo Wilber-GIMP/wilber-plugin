@@ -6,60 +6,11 @@ import os
 import logging
 import gtk
 
+from wilber_package import AssetValidator
 
 DEBUG = False
 
 logger = logging.getLogger('wilber.gui.upload')
-
-
-class FileValidator(object):
-    extension_message = "Extension '%(extension)s' of file '%(filename)s' not allowed. Allowed extensions are: '%(allowed_extensions)s.'"
-    min_size_message = "'%(filename)s' file has %(size)s, which is too small. The minumum file size is %(allowed_size)s."
-    max_size_message = "'%(filename)s' file has %(size)s, which is too large. The maximum file size is %(allowed_size)s."
-
-    def __init__(self, *args, **kwargs):
-        self.allowed_extensions = kwargs.pop('allowed_extensions', None)
-        self.min_size = kwargs.pop('min_size', 1)
-        self.max_size = kwargs.pop('max_size', 20 * 10**20)  # 20 MiB
-
-    def __call__(self, filepath):
-        # Check the extension
-        self.filename = basename(filepath)
-        self.ext = splitext(filepath)[1].lower()
-
-        if self.allowed_extensions and self.ext not in self.allowed_extensions:
-            message = self.extension_message % {
-                'filename': self.filename,
-                'extension': self.ext,
-                'allowed_extensions': ', '.join(self.allowed_extensions)
-            }
-            return False, message
-
-        filesize = getsize(filepath)
-        if self.max_size and filesize > self.max_size:
-            message = self.max_size_message % {
-                'filename': self.filename,
-                'size': self.filesizeformat(filesize),
-                'allowed_size': self.filesizeformat(self.max_size)
-            }
-            return False, message
-
-        elif filesize < self.min_size:
-            message = self.min_size_message % {
-                'filename': self.filename,
-                'size': self.filesizeformat(filesize),
-                'allowed_size': self.filesizeformat(self.min_size)
-            }
-            return False, message
-
-        return True, ''
-
-    def filesizeformat(self, num, suffix='B'):
-        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
-            if abs(num) < 1024.0:
-                return "%3.1f%s%s" % (num, unit, suffix)
-            num /= 1024.0
-        return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
 class Folder(object):
@@ -107,44 +58,55 @@ class WilberUploadDialog(object):
         self.button_remove_file = gtk.Button("Remove Selected")
         self.entry_name = gtk.Entry()
         self.entry_description = gtk.TextView()
+        scrollable_view_description = gtk.ScrolledWindow()
+        scrollable_view_description.add(self.entry_description)
+
         self.entry_description.set_size_request(200, 100)
         self.category_dropdown = gtk.combo_box_new_text()
         for asset_type in ASSET_TYPE_TO_CATEGORY.keys():
             self.category_dropdown.append_text(asset_type)
 
         self.image_widget = gtk.Image()
-        self.files_model = gtk.ListStore(str)
+        self.files_model = gtk.ListStore(str, str, str)
 
-        scrollable_view = gtk.ScrolledWindow()
+        scrollable_view_files = gtk.ScrolledWindow()
 
         view_files = gtk.TreeView(model=self.files_model)
-        scrollable_view.add(view_files)
+        scrollable_view_files.add(view_files)
         self.selection = view_files.get_selection()
 
-        cell = gtk.CellRendererText()
-        col = gtk.TreeViewColumn('Filename', cell, text=0)
-        view_files.append_column(col)
+        view_files.append_column(gtk.TreeViewColumn('Filename', gtk.CellRendererText(), text=0))
+        view_files.append_column(gtk.TreeViewColumn('Category', gtk.CellRendererText(), text=1))
+        view_files.append_column(gtk.TreeViewColumn('Message', gtk.CellRendererText(), text=2))
 
         table = gtk.Table(rows=2, columns=2)
         self.dialog.vbox.pack_start(table)
 
         table.attach(label_name,                0, 1, 0, 1, False, False, 5, 5)
         table.attach(label_description,         0, 1, 1, 2, False, False, 5, 5)
-        table.attach(self.button_select_image,  0, 1, 2, 3, False, False, 5, 5)
-        table.attach(label_category,            0, 1, 3, 4, False, False, 5, 5)
-        table.attach(self.button_add_file,      0, 1, 4, 5, False, False, 5, 5)
-        table.attach(self.button_remove_file,   0, 1, 5, 6, False, False, 5, 5)
+
+
+        table.attach(self.button_add_file,      0, 1, 2, 3, False, False, 5, 5)
+        table.attach(self.button_remove_file,   0, 1, 3, 4, False, False, 5, 5)
+
+        table.attach(label_category,            2, 3, 0, 1, False, False, 5, 5)
+        table.attach(self.category_dropdown,    3, 4, 0, 1, False, False, 5, 5)
+
+        table.attach(self.button_select_image,  2, 3, 1, 2, False, False, 5, 5)
+        table.attach(self.image_widget,         3, 4, 1, 2, False, gtk.FILL, 5, 5)
 
         table.attach(self.entry_name,           1, 2, 0, 1, gtk.EXPAND | gtk.FILL, False, 5, 5)
-        table.attach(self.entry_description,    1, 2, 1, 2, gtk.EXPAND | gtk.FILL, gtk.EXPAND | gtk.FILL, 5, 5)
-        table.attach(self.image_widget,         1, 2, 2, 3, gtk.EXPAND | gtk.FILL, gtk.FILL, 5, 5)
-        table.attach(self.category_dropdown,    1, 2, 3, 4, gtk.EXPAND | gtk.FILL, False, 5, 5)
-        table.attach(scrollable_view,           1, 2, 4, 6, gtk.EXPAND | gtk.FILL, gtk.EXPAND | gtk.FILL, 5, 5)
+        table.attach(scrollable_view_description,    1, 2, 1, 2, gtk.EXPAND | gtk.FILL, gtk.FILL, 5, 5)
+        table.attach(scrollable_view_files,           1, 4, 2, 4, gtk.EXPAND | gtk.FILL, gtk.EXPAND | gtk.FILL, 5, 5)
 
-        table.attach(self.status_message,       0, 2, 6, 7, False, False, 5, 5)
+        table.attach(self.status_message,       0, 4, 4, 5, False, False, 5, 5)
 
     def set_message(self, message):
         self.status_message.set_text(message)
+
+    def category_changed(self, *args):
+        self.validate_files()
+        self.validate_data()
 
     def connect_signals(self):
         self.button_select_image.connect("clicked", self.select_image)
@@ -153,7 +115,7 @@ class WilberUploadDialog(object):
 
         self.entry_name.connect("focus-out-event", self.validate_data)
         self.entry_description.connect("focus-out-event", self.validate_data)
-        self.category_dropdown.connect("changed", self.validate_data)
+        self.category_dropdown.connect("changed", self.category_changed)
 
     def select_image(self, widget):
         dialog = gtk.FileChooserDialog(title="Select Image", action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
@@ -176,6 +138,19 @@ class WilberUploadDialog(object):
         self.validate_data()
         return filename
 
+    def validate_file(self, filepath):
+        validator = AssetValidator(self.get_category())
+        category = validator.guess_category(filepath)
+        result, message = validator.validate(filepath)
+        return category, result, message
+
+    def validate_files(self):
+        for row in self.files_model:
+            filename = row[0]
+            category, result, message = self.validate_file(filename)
+            row[1] = category or 'Unknown'
+            row[2] = message or ''
+
     def add_file(self, widget):
         with Folder(self.base_folder) as folder:
             dialog = gtk.FileChooserDialog(
@@ -190,8 +165,10 @@ class WilberUploadDialog(object):
         if response == gtk.RESPONSE_OK:
             filenames = dialog.get_filenames()
             for filename in filenames:
-                self.files_model.append([filename])
+                category, result, message = self.validate_file(filename)
+                self.files_model.append([filename, category, message])
         dialog.destroy()
+        self.validate_files()
         self.validate_data()
 
     def remove_file(self, widget):
@@ -199,6 +176,8 @@ class WilberUploadDialog(object):
             (model, i) = self.selection.get_selected()
             if i is not None:
                 model.remove(i)
+
+        self.validate_files()
         self.validate_data()
 
     def get_name(self):
@@ -238,21 +217,7 @@ class WilberUploadDialog(object):
         self.dialog.destroy()
         return response, data
 
-    def validate_files(self, category, filenames):
-        validators = {
-            "brushes": FileValidator(allowed_extensions=['.gbr', '.vbr', '.gih']),
-            "patterns": FileValidator(allowed_extensions=['.pat']),
-            "gradients": FileValidator(allowed_extensions=['.ggr']),
-            "plug-ins": FileValidator(allowed_extensions=['.py', '.zip']),
-            "palettes": FileValidator(allowed_extensions=['.gpl']),
-            "tool-presets": FileValidator(allowed_extensions=['.gtp']),
-        }
 
-        validator = validators[category]
-        validations = [validator(filename) for filename in filenames]
-        result = all([i[0] for i in validations])
-        message = ' '.join([i[1] for i in validations])
-        return result, message
 
     def validate_data(self, widget=None, event=None):
         data = self.grab_data()
@@ -263,13 +228,13 @@ class WilberUploadDialog(object):
             self.set_message("Please fill the fields: " + ', '.join(void_fields))
             return False
         else:
-            valid, message = self.validate_files(data['category'], data['filenames'])
+            valid, message = AssetValidator(data['category'])(data['filenames'])
             if not valid:
-                self.set_message(message)
+                self.set_message("Some files selected are not allowed, please remove them.")
                 self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, False)
                 return False
 
-        self.set_message("")
+        self.set_message("Everything is ok! Lets upload!")
         self.dialog.set_response_sensitive(gtk.RESPONSE_ACCEPT, True)
         logger.info('Data is valid')
         return True

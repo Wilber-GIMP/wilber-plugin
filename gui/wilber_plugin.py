@@ -19,6 +19,7 @@ except:
 
 
 # Wilber imports
+from wilber_package import WilberPackage
 from wilber_api import WilberAPIClient
 from wilber_common import Asset, ASSET_TYPE_TO_CATEGORY
 from wilber_log import logger
@@ -45,9 +46,10 @@ class WilberPlugin(object):
         Asset.gimp_directory = GIMP_DIRECTORY
         self.api = WilberAPIClient()
         self.db = self.init_db()
-        self.current_asset_type = "brush"
         self.installed = {}
         self.update_installed()
+
+        self.current_asset_type = None
 
     def init_db(self):
         db_path = os.path.join(self.get_wilber_folder(), 'wilber_db.sqlite')
@@ -134,7 +136,7 @@ class WilberPlugin(object):
                 filepath = self.download_file(url)
                 asset['image_path'] = filepath
             return assets, has_more
-        return None
+        return None, None
 
     def sanitize_response(self, response):
         from gimpfu import pdb
@@ -196,6 +198,16 @@ class WilberPlugin(object):
         if folder in self.installed:
             return filename in self.installed[folder]
         return False
+
+    def upload_asset(self, name, description, category, image, filenames):
+        package = WilberPackage(name, description, category, image, filenames)
+        package_path = package.make()
+        if package_path:
+            response = self.api.put_asset(name, category, description, package.image, package_path)
+            package.clean()
+            return response
+
+
 
 
 def slugify(name):
